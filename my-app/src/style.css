@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #1a1625;  /* warna gelap global */
+  overflow-x: hidden
+
+}
+
+/* supaya root app ikut penuh */
+#app {
+  min-height: 100vh;
+}
