@@ -106,10 +106,10 @@
                         </div>
 
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            AI Menganalisis Asap/Api
+                            AI Menganalisis Api
                         </h3>
                         <p class="text-gray-400 leading-relaxed">
-                            Model deep learning mendeteksi pola api dan asap
+                            Model deep learning mendeteksi pola api
                             dengan akurasi 99.9%
                         </p>
                     </div>
