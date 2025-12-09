@@ -10,6 +10,7 @@ import math
 import numpy as np  
 
 from telegram_notifier import TelegramNotifier
+import sqlite3
 
 app = Flask(__name__)
 
@@ -21,26 +22,11 @@ CORS(app, resources={
     }
 })
 
-# Dictionary untuk menyimpan state per sesi (per kamera)
-# Format key: session_id
-# Value: {
-#   "camera": cv2.VideoCapture object,
-#   "is_detecting": bool,
-#   "settings": dict,
-#   "last_boxes": [],
-#   "last_frame_w": 0,
-#   "last_frame_h": 0,
-#   "fire_was_detected": bool,
-#   "frame_counter": 0
-# }
 sessions = {}
 
-# Model global (bisa dishare karena thread-safe untuk predict)
 model = None
 
 try:
-    # Notifier instance global, tapi bisa juga per sesi kalau mau chat_id beda
-    # Disini kita pakai satu bot telegram buat semua alert
     notifier = TelegramNotifier(
         token="8092461515:AAH1mB855P5-joxZ-eZQ3dBNKmqvO9yipSc",  
         chat_id="1805496530",                                    
@@ -52,7 +38,6 @@ except Exception as e:
 
 
 def load_model():
-    """Load model YOLO yang sudah dilatih"""
     global model
     model_path = os.path.join(os.path.dirname(__file__), 'best (17).pt')
     
@@ -70,7 +55,6 @@ def load_model():
 
 
 def detect_fire(frame, session_data):
-    """Fungsi deteksi api menggunakan YOLOv8 per sesi"""
     global model
     
     if model is None:
@@ -137,9 +121,6 @@ def detect_fire(frame, session_data):
 
 
 def generate_frames(session_id):
-    """
-    Generator stream video per sesi.
-    """
     global sessions, notifier
 
     if session_id not in sessions:
@@ -162,7 +143,6 @@ def generate_frames(session_id):
         try:
             frame = cv2.resize(frame, (640, 480))
 
-            # Pass session object to detect_fire to manage counter & settings
             processed_frame, fire_detected, detections = detect_fire(frame, session)
 
             h, w = processed_frame.shape[:2]
@@ -183,7 +163,6 @@ def generate_frames(session_id):
                 })
             session["last_boxes"] = boxes_for_api
 
-            # Logic Notifikasi (Telegram)
             if notifier is not None:
                 if fire_detected and not session["fire_was_detected"]:
                     session["fire_was_detected"] = True
@@ -193,8 +172,36 @@ def generate_frames(session_id):
                             frame=processed_frame
                         )
                         print("📨 Telegram alert sent.")
+                        
+                        try:
+                            conn = sqlite3.connect('firevision.db')
+                            c = conn.cursor()
+                            
+                            max_conf = 0
+                            for d in detections:
+                                if d['confidence'] > max_conf:
+                                    max_conf = d['confidence']
+                            
+                            c.execute('''
+                                INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            ''', (
+                                session_id,
+                                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                f"Camera {session_id[:4]}", 
+                                "Zone A", 
+                                int(max_conf * 100),
+                                "Baru",
+                                ""
+                            ))
+                            conn.commit()
+                            conn.close()
+                            print("💾 Alarm stored to DB.")
+                        except Exception as e:
+                            print(f"❌ Database error: {e}")
+                            
                     except Exception as e:
-                        print("❌ Gagal kirim Telegram:", e)
+                        print(f"❌ Gagal kirim Telegram: {e}")
 
                 elif not fire_detected and session["fire_was_detected"]:
                     session["fire_was_detected"] = False
@@ -203,8 +210,9 @@ def generate_frames(session_id):
                             f"✅ Api telah padam (Cam {session_id[:4]}) — kondisi aman."
                         )
                         print("📨 Telegram cleared sent.")
+                        
                     except Exception as e:
-                        print("❌ Gagal kirim Telegram:", e)
+                        print(f"❌ Gagal kirim Telegram: {e}")
 
             ret, buffer = cv2.imencode('.jpg', processed_frame)
             if not ret:
@@ -227,10 +235,6 @@ def index():
 
 @app.route('/api/start-detection', methods=['POST'])
 def start_detection():
-    """
-    Endpoint untuk menyalakan kamera baru. 
-    Akan membuat session baru setiap kali dipanggil.
-    """
     global model, sessions
     
     try:
@@ -242,10 +246,8 @@ def start_detection():
         data = request.get_json() or {}
 
         camera_source = str(data.get('camera_source', 'WEBCAM')).upper()
-        # Jika camera_source IPHONE/IP_CAMERA, user wajib kirim ip_camera_url
         ip_camera_url = data.get('ip_camera_url') 
 
-        # Setup settings awal
         initial_settings = {
             "sensitivity": data.get("sensitivity", 70),
             "camera_source": camera_source,
@@ -255,7 +257,6 @@ def start_detection():
             "playbackControls": data.get("playbackControls", False),
         }
         
-        # Buat Session ID Baru
         session_id_str = str(uuid.uuid4())
         
         print(f"📷 Request Start Camera. Source: {camera_source}")
@@ -264,8 +265,6 @@ def start_detection():
 
         if camera_source == 'IPHONE' or camera_source == 'IP_CAMERA':
             if not ip_camera_url:
-                # Default fallback for convenience if needed, but better to require it
-                # ip_camera_url = "http://192.168.1.X:8080/video"
                 return jsonify({'error': 'URL IP Camera kosong!'}), 400
             
             print(f"Connecting to IP Camera at: {ip_camera_url}")
@@ -278,8 +277,6 @@ def start_detection():
                 camera_obj = cv2.VideoCapture(ip_camera_url)
         
         else:
-            # WEBCAM
-            # Boleh terima parameter 'camera_index' kalau user punya banyak webcam USB
             cam_idx = data.get('camera_index', 0)
             print(f"Connecting to Webcam (Index {cam_idx})...")
             camera_obj = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
@@ -291,7 +288,6 @@ def start_detection():
             print("❌ GAGAL: Kamera tidak bisa dibuka.")
             return jsonify({'error': 'Failed to open camera. Check connection/URL.'}), 500
 
-        # Simpan ke dictionary sessions
         sessions[session_id_str] = {
             "camera": camera_obj,
             "is_detecting": True,
@@ -317,20 +313,12 @@ def start_detection():
 
 @app.route('/api/update-settings', methods=['POST'])
 def update_settings():
-    """
-    Update setting untuk session tertentu.
-    User harus kirim session_id di body/params, kalau tidak update mana?
-    Disini kita coba support parameter 'session_id' di body json.
-    """
     global sessions
     data = request.get_json() or {}
     
-    # Kalau client lama (single cam) gak kirim session_id, kita bisa asumsi update semua session?
-    # Atau ambil session pertama. Aman-nya, client harus kirim session_id.
     target_session_id = data.get('session_id')
     
     if target_session_id:
-        # Update spesifik
         if target_session_id in sessions:
             settings = sessions[target_session_id]["settings"]
             if 'sensitivity' in data: settings['sensitivity'] = data['sensitivity']
@@ -340,7 +328,6 @@ def update_settings():
         else:
             return jsonify({'error': 'Session not found'}), 404
     else:
-        # Update semua session (misal global setting)
         for sid in sessions:
             settings = sessions[sid]["settings"]
             if 'sensitivity' in data: settings['sensitivity'] = data['sensitivity']
@@ -359,7 +346,7 @@ def stop_detection():
         if target_session_id in sessions:
             session = sessions[target_session_id]
             session["is_detecting"] = False
-            time.sleep(0.5) # Tunggu loop berhenti
+            time.sleep(0.5) 
             if session["camera"]:
                 session["camera"].release()
             del sessions[target_session_id]
@@ -368,8 +355,6 @@ def stop_detection():
         else:
             return jsonify({'status': 'not_found_or_already_stopped'})
     else:
-        # Stop All
-        # Hanya stop all jika ada flag khusus, untuk mencegah legacy code mematian semua
         if data.get('stop_all') is True:
             print("🛑 Stopping ALL sessions...")
             ids = list(sessions.keys())
@@ -380,14 +365,11 @@ def stop_detection():
             sessions.clear()
             return jsonify({'status': 'stopped_all'})
         else:
-            # Jika tidak ada session_id dan tidak ada flag stop_all, jangan lakukan apa-apa
-            # Ini untuk backward compatibility biar DemoFire.vue lama gak matikan semua sesi
             print("⚠️ Warning: stop-detection called without session_id. Ignoring to prevent stopping all sessions.")
             return jsonify({'status': 'ignored_missing_session_id'}), 200
 
 @app.route('/api/video-feed')
 def video_feed():
-    """Route ini yang dipanggil oleh tag <img src=...> di Vue"""
     session_id = request.args.get('session')
     if not session_id:
         return "Missing session parameter", 400
@@ -398,6 +380,27 @@ def video_feed():
     )
 
 
+def init_db():
+    conn = sqlite3.connect('firevision.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS alarms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uuid TEXT,
+            timestamp TEXT,
+            camera_id TEXT,
+            zone TEXT,
+            confidence REAL,
+            status TEXT, 
+            image_path TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+    print("✅ Database initialized (firevision.db)")
+
+init_db()
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({
@@ -406,11 +409,61 @@ def health_check():
     })
 
 
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    try:
+        conn = sqlite3.connect('firevision.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        
+        c.execute("SELECT * FROM alarms ORDER BY id DESC")
+        rows = c.fetchall()
+        
+        history = []
+        for row in rows:
+            history.append({
+                "id": f"ALM-{row['id']:03d}", 
+                "db_id": row['id'],
+                "uuid": row['uuid'],
+                "time": row['timestamp'].split(' ')[1] if row['timestamp'] else "",
+                "date": row['timestamp'].split(' ')[0] if row['timestamp'] else "",
+                "camera": row['camera_id'],
+                "zone": row['zone'],
+                "confidence": row['confidence'],
+                "status": row['status'],
+                "image_path": row['image_path']
+            })
+        
+        conn.close()
+        return jsonify(history)
+    except Exception as e:
+        print(f"Error fetching history: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/history/update-status', methods=['POST'])
+def update_history_status():
+    data = request.get_json() or {}
+    db_id = data.get('db_id')
+    new_status = data.get('status')
+    
+    if not db_id or not new_status:
+        return jsonify({'error': 'Missing db_id or status'}), 400
+        
+    try:
+        conn = sqlite3.connect('firevision.db')
+        c = conn.cursor()
+        c.execute("UPDATE alarms SET status = ? WHERE id = ?", (new_status, db_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'status': 'updated', 'db_id': db_id, 'new_status': new_status})
+    except Exception as e:
+        print(f"Error updating history: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/detections', methods=['GET'])
 def get_detections():
-    """
-    Endpoint deteksi JSON. Butuh parameter ?session=...
-    """
     global sessions
     session_id = request.args.get('session')
     
@@ -426,9 +479,6 @@ def get_detections():
 
 @app.route('/api/detect', methods=['POST'])
 def detect_single_frame():
-    """
-    Endpoint untuk deteksi dari 1 gambar upload (tidak butuh session).
-    """
     global model, notifier
 
     print("=== /api/detect dipanggil ===")
@@ -454,7 +504,6 @@ def detect_single_frame():
         except:
             sensitivity = 70
 
-        # Kita buat dummy session data buat detect_fire
         dummy_session = {
             "settings": {"sensitivity": sensitivity},
             "frame_counter": 0
@@ -462,9 +511,7 @@ def detect_single_frame():
         
         processed_frame, fire_detected, detections = detect_fire(frame, dummy_session)
 
-        # Bisa kirim telegram juga
         if fire_detected and notifier is not None:
-             # ... (Opsional: kirim notif untuk single upload)
              pass
 
         return jsonify({
