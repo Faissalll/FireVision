@@ -30,10 +30,15 @@
         </div>
         
         <div>
-          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Produk</h3>
+          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Halaman</h3>
           <ul class="space-y-3">
             <li v-for="item in productLinks" :key="item.name">
-              <a :href="item.href" class="text-sm hover:text-white transition-colors duration-200">{{ item.name }}</a>
+              <button 
+                @click="navigateTo(item.path)" 
+                class="text-sm text-gray-400 hover:text-white transition-colors duration-200 text-left"
+              >
+                {{ item.name }}
+              </button>
             </li>
           </ul>
         </div>
@@ -74,7 +79,6 @@
           &copy; 2025 FireVision. Hak cipta dilindungi undang-undang.
         </p>
         <p class="text-sm text-gray-500 mt-4 md:mt-0 text-center md:text-right">
-          Dibangun dengan AI &bull; Didukung oleh Inovasi
         </p>
       </div>
       
@@ -83,11 +87,25 @@
 </template>
 
 <script setup>
+import { useRouter, useRoute } from 'vue-router';
+
+const router = useRouter();
+const route = useRoute();
+
+const navigateTo = (path) => {
+    router.push(path);
+};
+
+const isActive = (path) => {
+    return route.path === path;
+};
+
 const productLinks = [
-  { name: 'Fitur', href: '#' },
-  { name: 'Harga', href: '#' },
-  { name: 'Demo', href: '#' },
-  { name: 'Cara Kerja', href: '#' },
+  { name: 'Beranda', path: '/' },
+  { name: 'Fitur', path: '/features' },
+  { name: 'Harga', path: '/pricing' },
+  { name: 'Demo', path: '/demo' },
+  { name: 'Cara Kerja', path: '/how-it-works' },
 ]
 
 const companyLinks = [

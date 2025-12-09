@@ -7,6 +7,7 @@ const detectionSensitivity = ref(70);
 const detectionSmoothing = ref(false);
 const noiseReductionLevel = ref(false);
 const playbackControls = ref(false);
+const sectionRef = ref(null);
 
 const processingSpeed = ref("30fps");
 
@@ -572,12 +573,36 @@ const checkBackendConnectionStable = async () => {
 
 onMounted(() => {
     checkBackendConnectionStable();
+
+    if (!sectionRef.value) return;
+
+    const elements = sectionRef.value.querySelectorAll('.animate-on-scroll');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                // Stagger scenario cards
+                if (entry.target.classList.contains('scenario-card')) {
+                    const index = Array.from(sectionRef.value.querySelectorAll('.scenario-card')).indexOf(entry.target);
+                    entry.target.style.transitionDelay = `${index * 0.1}s`;
+                }
+                
+                entry.target.classList.remove('prepare-animate');
+                entry.target.classList.add('animate');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    elements.forEach(el => {
+        el.classList.add('prepare-animate');
+        observer.observe(el);
+    });
 });
 </script>
 
 <template>
-    <div class="demo-fire-container">
-        <section class="action-section">
+    <div ref="sectionRef" class="demo-fire-container">
+        <section class="action-section animate-on-scroll">
             <h2 class="section-title">Coba Sendiri</h2>
             <p class="section-subtitle">
                 Rasakan deteksi api real-time yang didukung oleh AI
@@ -710,13 +735,13 @@ onMounted(() => {
 
         <section class="try-section">
             <div class="container">
-                <h2 class="section-title">Pengaturan & Skenario</h2>
-                <p class="section-subtitle">
+                <h2 class="section-title animate-on-scroll">Pengaturan & Skenario</h2>
+                <p class="section-subtitle animate-on-scroll">
                     Sesuaikan parameter deteksi dan uji dengan kamera Anda
                 </p>
 
                 <div class="demo-grid">
-                    <div class="settings-panel">
+                    <div class="settings-panel animate-on-scroll">
                         <div class="panel-header">
                             <!-- <span class="panel-icon">⚙️</span> -->
                             <h3>Pengaturan Deteksi</h3>
@@ -871,7 +896,7 @@ onMounted(() => {
                             <div
                                 v-for="(scenario, index) in demoScenarios"
                                 :key="index"
-                                class="scenario-card"
+                                class="scenario-card animate-on-scroll"
                             >
                                 <h4 class="scenario-title">
                                     {{ scenario.title }}
@@ -1403,5 +1428,22 @@ input[type="text"] {
 
 input[type="text"]::placeholder {
     color: #9ca3af;
+}
+
+/* Animation Classes */
+.animate-on-scroll {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.animate-on-scroll.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.animate-on-scroll.animate {
+    opacity: 1;
+    transform: translateY(0);
 }
 </style>

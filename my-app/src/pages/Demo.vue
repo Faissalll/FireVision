@@ -1,13 +1,36 @@
 <script setup>
 import DemoFire from "../components/DemoFire.vue";
 import Footer from "../components/Footer.vue";
+import { onMounted, ref } from 'vue';
+
+const pageRef = ref(null);
+
+onMounted(() => {
+    if (!pageRef.value) return;
+
+    const elements = pageRef.value.querySelectorAll('.animate-on-scroll');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                entry.target.classList.remove('prepare-animate');
+                entry.target.classList.add('animate');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    elements.forEach(el => {
+        el.classList.add('prepare-animate');
+        observer.observe(el);
+    });
+});
 </script>
 
 <template>
-    <div class="demo-page">
+    <div ref="pageRef" class="demo-page">
         <div class="demo-header">
-            <h1 class="demo-title">Demo Interaktif</h1>
-            <p class="demo-subtitle">
+            <h1 class="demo-title animate-on-scroll">Demo Interaktif</h1>
+            <p class="demo-subtitle animate-on-scroll">
                 Rasakan deteksi api bertenaga AI dari FireVision secara langsung.
                 Sesuaikan pengaturan dan lihat hasil secara real-time.
             </p>
@@ -98,6 +121,24 @@ import Footer from "../components/Footer.vue";
     font-size: 14px;
     font-weight: 600;
     animation: fadeInOut 2s ease-in-out infinite;
+}
+
+
+
+.animate-on-scroll {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.animate-on-scroll.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.animate-on-scroll.animate {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 @media (max-width: 768px) {
