@@ -11,8 +11,8 @@
               </svg>
             </div>
             <div>
-              <h3 class="text-xl font-bold text-white mb-2">Lightning-Fast Detection</h3>
-              <p class="text-gray-400 text-sm">Our AI processes video feeds in real-time with response times under 500ms, ensuring instant threat detection.</p>
+              <h3 class="text-xl font-bold text-white mb-2">Deteksi Secepat Kilat</h3>
+              <p class="text-gray-400 text-sm">AI kami memproses umpan video secara real-time dengan waktu respons di bawah 500ms, memastikan deteksi ancaman instan.</p>
             </div>
           </div>
           <ul class="space-y-2">
@@ -20,25 +20,25 @@
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Sub-500ms detection latency</span>
+              <span>Latensi deteksi di bawah 500ms</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Continuous monitoring</span>
+              <span>Pemantauan berkelanjutan</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Parallel multi-stream analysis</span>
+              <span>Analisis multi-stream paralel</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Edge computing support</span>
+              <span>Dukungan komputasi edge</span>
             </li>
           </ul>
         </div>
@@ -51,8 +51,8 @@
               </svg>
             </div>
             <div>
-              <h3 class="text-xl font-bold text-white mb-2">99.9% Accuracy Rate</h3>
-              <p class="text-gray-400 text-sm">Advanced deep learning models trained on millions of fire and smoke scenarios deliver unmatched precision.</p>
+              <h3 class="text-xl font-bold text-white mb-2">Tingkat Akurasi 99.9%</h3>
+              <p class="text-gray-400 text-sm">Model deep learning canggih yang dilatih pada jutaan skenario api dan asap memberikan presisi yang tak tertandingi.</p>
             </div>
           </div>
           <ul class="space-y-2">
@@ -60,25 +60,25 @@
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>False positive rate < 0.1%</span>
+              <span>Tingkat positif palsu < 0.1%</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Adaptive learning algorithms</span>
+              <span>Algoritma pembelajaran adaptif</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Environmental adaptation</span>
+              <span>Adaptasi lingkungan</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Weather-resistant detection</span>
+              <span>Deteksi tahan cuaca</span>
             </li>
           </ul>
         </div>
@@ -92,7 +92,7 @@
             </div>
             <div>
               <h3 class="text-xl font-bold text-white mb-2">Cloud & On-Premise</h3>
-              <p class="text-gray-400 text-sm">Deploy FireVision in the cloud, on-premise, or hybrid configuration based on your security requirements.</p>
+              <p class="text-gray-400 text-sm">Deploy FireVision di cloud, on-premise, atau konfigurasi hybrid berdasarkan kebutuhan keamanan Anda.</p>
             </div>
           </div>
           <ul class="space-y-2">
@@ -100,25 +100,25 @@
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Flexible deployment options</span>
+              <span>Opsi penerapan fleksibel</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Scalable infrastructure</span>
+              <span>Infrastruktur skalabel</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Data sovereignty compliance</span>
+              <span>Kepatuhan kedaulatan data</span>
             </li>
             <li class="flex items-center gap-2 text-gray-400 text-sm">
               <svg class="w-4 h-4 text-[#4D41C0]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              <span>Automatic failover</span>
+              <span>Failover otomatis</span>
             </li>
           </ul>
         </div>

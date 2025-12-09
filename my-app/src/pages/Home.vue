@@ -20,35 +20,34 @@ onMounted(() => {
     <div class="overflow-x-hidden">
         <div
             class="min-h-screen bg-[#4D41C0] flex items-center justify-center px-4"
-            :class="{ 'animate-fadeInUp': firstVisit }"
         >
             <div class="max-w-4xl mx-auto text-center">
                 <div class="mb-8 flex justify-center">
                     <div
-                        class="w-32 h-32 bg-[#5D51D0] rounded-full flex items-center justify-center shadow-2xl"
+                        class="w-64 h-64 bg-[#5D51D0] rounded-full flex items-center justify-center shadow-2xl"
                     >
                         <img
-                            src="../assets/LogoWeb.png"
+                            src="../assets/LOGO.svg"
                             alt="FireVision Logo"
-                            class="w-20 h-20 object-contain"
+                            class="w-40 h-40 object-contain"
                         />
                     </div>
                 </div>
 
                 <h1 class="text-5xl md:text-6xl font-bold text-white mb-6">
-                    FireVision – AI Fire & Smoke Detection
+                    FireVision – Deteksi Api & Asap AI
                 </h1>
 
                 <p class="text-xl md:text-2xl text-gray-200 mb-12">
-                    Real-time fire and smoke monitoring powered by artificial
-                    intelligence.
+                    Pemantauan api dan asap real-time yang didukung oleh kecerdasan buatan.
                 </p>
 
                 <div
                     class="flex flex-col sm:flex-row items-center justify-center gap-4"
                 >
                     <button
-                        class="bg-[#3D31B0] text-white px-8 py-3 rounded-lg font-semibold transition-all duration-500 ease-out shadow-lg hover:shadow-2xl hover:shadow-[#3D31B0]/60 flex items-center gap-2 hover:scale-105 hover:translate-z-10 perspective-1000 group"
+                         @click="$router.push('/demo')"
+                        class="bg-[#3D31B0] text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-[#3D31B0]/60 flex items-center gap-2 hover:scale-105 group"
                     >
                         <svg
                             class="w-5 h-5 group-hover:animate-pulse"
@@ -64,16 +63,17 @@ onMounted(() => {
                         </svg>
                         <span
                             class="group-hover:tracking-wide transition-all duration-300"
-                            >Try Demo</span
+                            >Coba Demo</span
                         >
                     </button>
 
                     <button
+                        @click="$router.push('/features')"
                         class="bg-white text-gray-800 px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-white/30 hover:scale-[1.02] hover:-translate-y-1 group"
                     >
                         <span
                             class="group-hover:tracking-wide transition-all duration-300"
-                            >Get Started</span
+                            >Mulai Sekarang</span
                         >
                         <svg
                             class="w-5 h-5 inline-block ml-2 group-hover:translate-x-1 transition-transform duration-300"

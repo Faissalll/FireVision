@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onUnmounted, nextTick, onMounted } from "vue";
+import { ref, onUnmounted, nextTick, onMounted, watch } from "vue";
 import FireDemoImage from "../assets/FireDemo.jpg";
+import alarmSound from "../assets/alarm.mp3"; // Import alarm sound
 
 const detectionSensitivity = ref(70);
 const detectionSmoothing = ref(false);
@@ -8,6 +9,39 @@ const noiseReductionLevel = ref(false);
 const playbackControls = ref(false);
 
 const processingSpeed = ref("30fps");
+
+// 🔹 Watcher untuk update setting secara realtime
+watch(detectionSensitivity, async (newVal) => {
+    if (isDetecting.value) {
+        try {
+            await fetch(`${API_BASE_URL}/api/update-settings`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sensitivity: getSafeSensitivity() }),
+            });
+        } catch (err) {
+            console.error("Failed to update sensitivity:", err);
+        }
+    }
+});
+
+watch([detectionSmoothing, noiseReductionLevel], async () => {
+    if (isDetecting.value) {
+        try {
+            await fetch(`${API_BASE_URL}/api/update-settings`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    smoothing: detectionSmoothing.value,
+                    noiseReduction: noiseReductionLevel.value
+                }),
+            });
+        } catch (err) {
+            console.error("Failed to update settings:", err);
+        }
+    }
+});
+
 const videoSize = ref("640x480");
 
 const isDetecting = ref(false);
@@ -24,6 +58,10 @@ const pollerId = ref(null);
 const isStreamReady = ref(false);
 let streamProbeId = null;
 let streamTimeoutId = null;
+
+// Audio setup
+const alarmAudio = new Audio(alarmSound);
+alarmAudio.loop = true;
 
 const demoBoundingBoxes = ref([
     {
@@ -48,32 +86,32 @@ const demoBoundingBoxes = ref([
 
 const demoScenarios = [
     {
-        title: "Industrial Fire Detection",
+        title: "Deteksi Kebakaran Industri",
         description:
-            "Manufacturing facility with active detection and alert monitoring",
-        downloads: "Fire Detected",
-        complexity: "High Confidence",
+            "Fasilitas manufaktur dengan deteksi aktif dan pemantauan peringatan",
+        downloads: "Api Terdeteksi",
+        complexity: "Tingkat Kepercayaan Tinggi",
     },
     {
-        title: "Warehouse Smoke Alert",
+        title: "Peringatan Asap Gudang",
         description:
-            "Early smoke detection in a storage area before flames appear",
-        downloads: "Smoke Detected",
-        complexity: "Medium Confidence",
+            "Deteksi asap dini di area penyimpanan sebelum api muncul",
+        downloads: "Asap Terdeteksi",
+        complexity: "Tingkat Kepercayaan Sedang",
     },
     {
-        title: "Kitchen Fire Suppression",
+        title: "Pemadaman Kebakaran Dapur",
         description:
-            "Residential kitchen fire detection with quick alert system",
-        downloads: "Fire Detected",
-        complexity: "High Confidence",
+            "Deteksi kebakaran dapur rumah tangga dengan sistem peringatan cepat",
+        downloads: "Api Terdeteksi",
+        complexity: "Tingkat Kepercayaan Tinggi",
     },
     {
-        title: "Electrical Fire Warning",
+        title: "Peringatan Kebakaran Listrik",
         description:
-            "Identify heat and smoke patterns associated with electrical sources",
-        downloads: "Heat Detected",
-        complexity: "Low Confidence",
+            "Identifikasi pola panas dan asap yang terkait dengan sumber listrik",
+        downloads: "Panas Terdeteksi",
+        complexity: "Tingkat Kepercayaan Rendah",
     },
 ];
 
@@ -179,6 +217,20 @@ async function startPollingDetections(activeSessionId) {
                 };
             });
 
+            // 🔹 Audio Alarm Logic
+			// If detections are found (boxes.length > 0) AND audio is paused, play it
+            if (boxes.length > 0) {
+                if (alarmAudio.paused) {
+                    alarmAudio.play().catch((err) => console.warn("Audio play blocked:", err));
+                }
+            } else {
+				// If no detections, pause and reset
+                if (!alarmAudio.paused) {
+                    alarmAudio.pause();
+                    alarmAudio.currentTime = 0;
+                }
+            }
+
             if (boxes.length && !isStreamReady.value) {
                 isStreamReady.value = true;
                 stopProbeStreamReady();
@@ -195,6 +247,12 @@ function stopPollingDetections() {
         pollerId.value = null;
     }
     detections.value = [];
+    
+    // Stop audio when polling stops
+    if (!alarmAudio.paused) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+    }
 }
 
 const playDemo = async () => {
@@ -265,16 +323,16 @@ const playDemo = async () => {
         console.error("❌ Error starting detection:", error);
         errorMessage.value = error.message;
 
-        let errorMsg = "❌ Failed to start fire detection!\n\n";
+        let errorMsg = "❌ Gagal memulai deteksi api!\n\n";
         if (
             String(error.message).includes("Failed to fetch") ||
             String(error.message).includes("not responding")
         ) {
             errorMsg +=
-                "Backend server is not running!\n\n" +
-                "Please:\n" +
-                "1. Open terminal in backend folder\n" +
-                "2. Run: python main.py\n" +
+                "Server backend tidak berjalan!\n\n" +
+                "Mohon:\n" +
+                "1. Buka terminal di folder backend\n" +
+                "2. Jalankan: python main.py\n" +
                 "3. Tunggu 'Running on http://localhost:5001'\n" +
                 "4. Coba lagi";
         } else if (String(error.message).toLowerCase().includes("camera")) {
@@ -301,6 +359,12 @@ const stopDetection = async () => {
         isDetecting.value = false;
         sessionId.value = null;
         videoSrc.value = "";
+        
+        // Stop audio
+        if (!alarmAudio.paused) {
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
+        }
     }
 };
 
@@ -351,6 +415,12 @@ onUnmounted(() => {
     }
     stopPollingDetections();
     stopProbeStreamReady();
+    
+    // Stop audio cleanup
+    if (alarmAudio) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+    }
 });
 
 onMounted(() => {
@@ -428,7 +498,7 @@ const playDemoStable = async () => {
         isDetecting.value = false;
         isStreamReady.value = false;
         errorMessage.value = String(error.message || "Unknown error");
-        alert("❌ Failed to start fire detection!\n\n" + errorMessage.value);
+        alert("❌ Gagal memulai deteksi api!\n\n" + errorMessage.value);
     }
 };
 
@@ -452,6 +522,13 @@ const stopDetectionStable = async () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
         }).catch(() => {});
+        
+       // Stop audio
+        if (!alarmAudio.paused) {
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
+        }
+
     } catch (error) {
         console.error("Error stopping detection (stable):", error);
     }
@@ -501,9 +578,9 @@ onMounted(() => {
 <template>
     <div class="demo-fire-container">
         <section class="action-section">
-            <h2 class="section-title">Try It Yourself</h2>
+            <h2 class="section-title">Coba Sendiri</h2>
             <p class="section-subtitle">
-                🔥 Experience real-time fire detection powered by AI
+                Rasakan deteksi api real-time yang didukung oleh AI
             </p>
 
             <div v-if="errorMessage" class="error-banner">
@@ -538,7 +615,7 @@ onMounted(() => {
                                 }"
                             >
                                 <span class="fire-label">
-                                    🔥 {{ box.label
+                                    {{ box.label
                                     }}<template v-if="box.confidence !== null">
                                         -
                                         {{
@@ -565,7 +642,7 @@ onMounted(() => {
                                 "
                             >
                                 <span class="fire-label"
-                                    >🔥 Fire Detected - 94.5%</span
+                                    >Fire Detected - 94.5%</span
                                 >
                             </div>
                             <div
@@ -578,7 +655,7 @@ onMounted(() => {
                                 "
                             >
                                 <span class="fire-label"
-                                    >🔥 Fire Detected - 89.2%</span
+                                    >Fire Detected - 89.2%</span
                                 >
                             </div>
                         </template>
@@ -592,14 +669,14 @@ onMounted(() => {
                             class="loading-overlay"
                         >
                             <div class="loading-spinner"></div>
-                            <p>Connecting to camera...</p>
+                            <p>Menghubungkan ke kamera...</p>
                         </div>
                     </div>
 
                     <div v-if="isDetecting" class="video-overlay">
                         <div class="overlay-badge">
                             <span class="badge-dot"></span>
-                            <span>Live Detection Active</span>
+                            <span>Deteksi Langsung Aktif</span>
                         </div>
                     </div>
 
@@ -616,7 +693,7 @@ onMounted(() => {
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Status</span>
-                            <span class="stat-value">✓ Active</span>
+                            <span class="stat-value">Aktif</span>
                         </div>
                     </div>
                 </div>
@@ -624,8 +701,8 @@ onMounted(() => {
                 <p class="video-caption">
                     {{
                         isDetecting
-                            ? "🔴 Live camera feed with AI detection"
-                            : "Click 'Start Detection' to begin"
+                            ? "Umpan kamera langsung dengan deteksi AI"
+                            : "Klik 'Mulai Deteksi' untuk memulai"
                     }}
                 </p>
             </div>
@@ -633,16 +710,16 @@ onMounted(() => {
 
         <section class="try-section">
             <div class="container">
-                <h2 class="section-title">Settings & Scenarios</h2>
+                <h2 class="section-title">Pengaturan & Skenario</h2>
                 <p class="section-subtitle">
-                    Adjust detection parameters and test with your own camera
+                    Sesuaikan parameter deteksi dan uji dengan kamera Anda
                 </p>
 
                 <div class="demo-grid">
                     <div class="settings-panel">
                         <div class="panel-header">
-                            <span class="panel-icon">⚙️</span>
-                            <h3>Detection Settings</h3>
+                            <!-- <span class="panel-icon">⚙️</span> -->
+                            <h3>Pengaturan Deteksi</h3>
                         </div>
 
                         <button
@@ -650,19 +727,17 @@ onMounted(() => {
                             :class="{ 'stop-button': isDetecting }"
                             @click="playDemo"
                         >
-                            <span class="button-icon">{{
-                                isDetecting ? "⏹️" : "▶️"
-                            }}</span>
+                            <span class="button-icon"></span>
                             <span>{{
                                 isDetecting
-                                    ? "Stop Detection"
-                                    : "Start Live Detection"
+                                    ? "Hentikan Deteksi"
+                                    : "Mulai Deteksi Langsung"
                             }}</span>
                         </button>
 
                         <div class="setting-group">
                             <label class="setting-label">
-                                Detection Sensitivity:
+                                Sensitivitas Deteksi:
                                 <span class="setting-value"
                                     >{{ detectionSensitivity }}%</span
                                 >
@@ -674,18 +749,17 @@ onMounted(() => {
                                 max="100"
                                 step="1"
                                 class="slider"
-                                :disabled="isDetecting"
                             />
                             <p class="setting-help">
-                                Higher sensitivity detects smaller fires but may
-                                increase false positives
+                                Sensitivitas lebih tinggi mendeteksi api lebih kecil tetapi mungkin
+                                meningkatkan positif palsu
                             </p>
                         </div>
 
                         <div class="setting-group">
                             <div class="setting-row">
                                 <label class="setting-label"
-                                    >Detection Smoothing</label
+                                    >Penghalusan Deteksi</label
                                 >
                                 <div class="toggle-switch">
                                     <input
@@ -693,7 +767,6 @@ onMounted(() => {
                                         v-model="detectionSmoothing"
                                         class="toggle-input"
                                         id="smoothing"
-                                        :disabled="isDetecting"
                                     />
                                     <label
                                         for="smoothing"
@@ -702,14 +775,14 @@ onMounted(() => {
                                 </div>
                             </div>
                             <p class="setting-help">
-                                Reduces flickering in detection results
+                                Mengurangi kedipan pada hasil deteksi
                             </p>
                         </div>
 
                         <div class="setting-group">
                             <div class="setting-row">
                                 <label class="setting-label"
-                                    >Noise Reduction</label
+                                    >Pengurangan Noise</label
                                 >
                                 <div class="toggle-switch">
                                     <input
@@ -717,7 +790,6 @@ onMounted(() => {
                                         v-model="noiseReductionLevel"
                                         class="toggle-input"
                                         id="noise"
-                                        :disabled="isDetecting"
                                     />
                                     <label
                                         for="noise"
