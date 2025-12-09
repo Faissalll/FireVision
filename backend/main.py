@@ -55,7 +55,7 @@ except Exception as e:
 def load_model():
     """Load model YOLO yang sudah dilatih"""
     global model
-    model_path = os.path.join(os.path.dirname(__file__), 'best (13).pt')
+    model_path = os.path.join(os.path.dirname(__file__), 'best (17).pt')
     
     if not os.path.exists(model_path):
         print(f"Error: Model file not found at {model_path}")
