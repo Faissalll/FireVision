@@ -1,5 +1,5 @@
 <template>
-    <section class="technical-architecture">
+    <section ref="sectionRef" class="technical-architecture">
         <div class="container">
             <h2 class="section-title">Arsitektur Teknis</h2>
             <p class="section-subtitle">
@@ -157,10 +157,36 @@
     </section>
 </template>
 
-<script>
-export default {
-    name: "TechnicalArchitecture",
-};
+<script setup>
+import { onMounted, ref } from 'vue';
+
+const sectionRef = ref(null);
+
+onMounted(() => {
+    if (!sectionRef.value) return;
+
+    // Use scoped querySelectorAll for reliability
+    const cards = sectionRef.value.querySelectorAll('.architecture-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                // Add stagger effect
+                entry.target.style.transitionDelay = `${index * 0.15}s`;
+                entry.target.classList.remove('prepare-animate');
+                entry.target.classList.add('animate');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+
+    cards.forEach(card => {
+        card.classList.add('prepare-animate');
+        observer.observe(card);
+    });
+});
 </script>
 
 <style scoped>
@@ -209,7 +235,19 @@ export default {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 32px;
-    transition: all 0.3s ease;
+    transition: all 0.6s ease-out;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.architecture-card.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.architecture-card.animate {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .architecture-card:hover {

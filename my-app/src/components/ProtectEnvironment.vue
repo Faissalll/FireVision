@@ -89,12 +89,6 @@ onMounted(() => {
 
         card.classList.add('prepare-animate');
         observer.observe(card);
-
-        // Failsafe: Force show after 3 seconds
-        setTimeout(() => {
-             card.classList.remove('prepare-animate');
-             card.classList.add('animate');
-        }, 3000);
     }
 });
 </script>

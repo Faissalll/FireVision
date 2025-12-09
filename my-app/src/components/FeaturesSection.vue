@@ -1,8 +1,9 @@
 <template>
-  <div class="bg-[#0F0F1E] py-20 px-4">
+  <div ref="sectionRef" class="bg-[#0F0F1E] py-20 px-4">
     <div class="max-w-7xl mx-auto">
 
-      <div class="text-center mb-16">
+      <!-- Top Title (Conditional) -->
+      <div v-if="titlePosition === 'top'" class="text-center mb-16">
         <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
           Fitur Canggih
         </h2>
@@ -11,14 +12,12 @@
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
 
         <div 
           v-for="(feature, index) in features" 
           :key="index"
-          ref="cardRefs" 
           class="feature-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300 group"
-          :style="{ animationDelay: `${index * 0.2}s` }"
         >
           <div class="w-16 h-16 bg-[#4D41C0] rounded-xl flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_rgba(77,65,192,0.6)] transition-all duration-300">
             <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="feature.icon">
@@ -33,6 +32,16 @@
         </div>
 
       </div>
+
+      <!-- Bottom Title (Conditional) -->
+      <div v-if="titlePosition === 'bottom'" class="text-center">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+          Fitur Canggih
+        </h2>
+        <p class="text-xl text-gray-400">
+          FireVision menggabungkan AI mutakhir dengan teknologi deteksi terbukti
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -40,7 +49,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
-const cardRefs = ref([])
+const sectionRef = ref(null)
+
+const props = defineProps({
+  titlePosition: {
+    type: String,
+    default: 'bottom'
+  }
+})
 
 const features = [
   {
@@ -66,10 +82,16 @@ const features = [
 ]
 
 onMounted(() => {
+  if (!sectionRef.value) return;
+
+  const cards = sectionRef.value.querySelectorAll('.feature-card');
+
   const observer = new IntersectionObserver(
     (entries) => {
-      entries.forEach((entry) => {
+      entries.forEach((entry, index) => {
         if (entry.isIntersecting) {
+          entry.target.style.transitionDelay = `${index * 0.2}s`
+          entry.target.classList.remove('prepare-animate')
           entry.target.classList.add('animate')
           observer.unobserve(entry.target)
         }
@@ -78,29 +100,27 @@ onMounted(() => {
     { threshold: 0.1 }
   )
 
-  if (Array.isArray(cardRefs.value)) {
-    cardRefs.value.forEach((card) => {
-      if (card) observer.observe(card)
-    })
-  }
+  cards.forEach((card) => {
+    card.classList.add('prepare-animate')
+    observer.observe(card)
+  })
 })
 </script>
 
 <style scoped>
 .feature-card {
-  opacity: 0;
-  transform: translateY(20px);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
-/* Class added by IntersectionObserver */
+.feature-card.prepare-animate {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
 .feature-card.animate {
-    animation: fadeInUp 0.6s ease-out forwards;
-}
-
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

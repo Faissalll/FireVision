@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-[#0F0F1E] py-20 px-4">
+  <div ref="sectionRef" class="bg-[#0F0F1E] py-20 px-4">
     <div class="max-w-7xl mx-auto">
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +43,7 @@
           </ul>
         </div>
 
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@
           </ul>
         </div>
 
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +123,7 @@
           </ul>
         </div>
 
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,7 +204,8 @@
         </div>
 
         <!-- Card 6: Advanced Analytics -->
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <!-- Card 6: Advanced Analytics -->
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,7 +245,7 @@
           </ul>
         </div>
 
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,7 +285,7 @@
           </ul>
         </div>
 
-        <div class="bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
+        <div class="feature-detail-card bg-[#1A1A2E] rounded-2xl p-8 border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300">
           <div class="flex items-start gap-4 mb-6">
             <div class="w-12 h-12 bg-[#4D41C0] rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,3 +330,53 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { onMounted, ref } from 'vue';
+
+const sectionRef = ref(null);
+
+onMounted(() => {
+    if (!sectionRef.value) return;
+
+    // Use scoped querySelectorAll for reliability
+    const cards = sectionRef.value.querySelectorAll('.feature-detail-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                // Add stagger effect
+                entry.target.style.transitionDelay = `${index * 0.15}s`;
+                entry.target.classList.remove('prepare-animate');
+                entry.target.classList.add('animate');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+
+    cards.forEach(card => {
+        card.classList.add('prepare-animate');
+        observer.observe(card);
+    });
+});
+</script>
+
+<style scoped>
+.feature-detail-card {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.6s ease-out;
+}
+
+.feature-detail-card.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.feature-detail-card.animate {
+     opacity: 1;
+    transform: translateY(0);
+}
+</style>

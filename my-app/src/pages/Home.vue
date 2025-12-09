@@ -13,6 +13,22 @@ onMounted(() => {
         firstVisit.value = true;
         localStorage.setItem("visitedHome", "true");
     }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                entry.target.classList.remove('prepare-animate');
+                entry.target.classList.add('animate');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-hero').forEach((el, index) => {
+        el.style.transitionDelay = `${index * 0.1}s`;
+        el.classList.add('prepare-animate');
+        observer.observe(el);
+    });
 });
 </script>
 
@@ -22,7 +38,7 @@ onMounted(() => {
             class="min-h-screen bg-[#4D41C0] flex items-center justify-center px-4"
         >
             <div class="max-w-4xl mx-auto text-center">
-                <div class="mb-8 flex justify-center">
+                <div class="mb-8 flex justify-center animate-hero">
                     <div
                         class="w-64 h-64 bg-[#5D51D0] rounded-full flex items-center justify-center shadow-2xl"
                     >
@@ -34,16 +50,16 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6">
+                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 animate-hero">
                     FireVision – Deteksi Api & Asap AI
                 </h1>
 
-                <p class="text-xl md:text-2xl text-gray-200 mb-12">
+                <p class="text-xl md:text-2xl text-gray-200 mb-12 animate-hero">
                     Pemantauan api dan asap real-time yang didukung oleh kecerdasan buatan.
                 </p>
 
                 <div
-                    class="flex flex-col sm:flex-row items-center justify-center gap-4"
+                    class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-hero"
                 >
                     <button
                          @click="$router.push('/demo')"
@@ -93,7 +109,7 @@ onMounted(() => {
             </div>
         </div>
 
-        <FeaturesSection />
+        <FeaturesSection titlePosition="top" />
 
         <HowItWorksSection />
 
@@ -116,5 +132,21 @@ onMounted(() => {
 
 .hover\:translate-z-10:hover {
     transform: translateZ(10px);
+}
+
+.animate-hero {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.animate-hero.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.animate-hero.animate {
+    opacity: 1;
+    transform: translateY(0);
 }
 </style>

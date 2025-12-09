@@ -182,19 +182,9 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 
-const props = defineProps({
-  delayAnimation: {
-    type: Boolean,
-    default: false
-  }
-})
-
 const sectionRef = ref(null)
 
 onMounted(() => {
-  const delay = props.delayAnimation ? 2000 : 0
-
-  setTimeout(() => {
     if (!sectionRef.value) return;
     
     // Use scoped querySelectorAll for reliability
@@ -219,16 +209,6 @@ onMounted(() => {
         card.classList.add('prepare-animate');
         observer.observe(card);
     })
-
-    // Failsafe: Force show after 3 seconds if something goes wrong
-    setTimeout(() => {
-        cards.forEach(card => {
-             card.classList.remove('prepare-animate');
-             card.classList.add('animate');
-        });
-    }, 3000);
-
-  }, delay)
 })
 </script>
 
