@@ -8,9 +8,11 @@ import Footer from '../components/Footer.vue'
 
 <template>
   <div>
+    <!-- Restored Header as requested -->
     <PowerfullFeaturesHeader />
 
-    <FeaturesSection />
+    <!-- Features Section with title hidden to avoid duplication -->
+    <FeaturesSection :showTitle="false" />
 
     <CardFeatures />
 

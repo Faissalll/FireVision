@@ -5,6 +5,7 @@ import HowItWorksSection from "../components/HowItWorksSection.vue";
 import TrustedAcrossIndustries from "../components/TrustedAcrossIndustries.vue";
 import ProtectEnvironment from "../components/ProtectEnvironment.vue";
 import Footer from "../components/Footer.vue";
+import ResedentialBg from "../assets/resedential.jpg"; // Import background image
 
 const firstVisit = ref(false);
 
@@ -33,81 +34,80 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="overflow-x-hidden">
-        <div
-            class="min-h-screen bg-[#4D41C0] flex items-center justify-center px-4"
-        >
-            <div class="max-w-4xl mx-auto text-center">
-                <div class="mb-8 flex justify-center animate-hero">
-                    <div
-                        class="w-64 h-64 bg-[#5D51D0] rounded-full flex items-center justify-center shadow-2xl"
-                    >
-                        <img
-                            src="../assets/LOGO.svg"
-                            alt="FireVision Logo"
-                            class="w-40 h-40 object-contain"
-                        />
+    <div class="overflow-x-hidden bg-[#0f0f1a]">
+        
+        <!-- NEW HERO SECTION BASED ON TSX + USER REQUEST -->
+        <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
+            
+            <!-- Background Image with Overlay -->
+            <div class="absolute inset-0 z-0">
+                <img 
+                    :src="ResedentialBg" 
+                    alt="Fire Detection" 
+                    class="w-full h-full object-cover opacity-40 transition-transform duration-1000 hover:scale-105" 
+                />
+                <div class="absolute inset-0 bg-gradient-to-b from-[#0f0f1a]/95 via-[#0f0f1a]/80 to-[#0f0f1a]"></div>
+            </div>
+
+            <!-- Animated Gradient Orbs -->
+            <div class="absolute top-20 left-10 w-96 h-96 bg-[#5d51e8] rounded-full blur-[120px] opacity-20 animate-pulse hidden md:block"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-[#ff4d4d] rounded-full blur-[120px] opacity-10 animate-pulse hidden md:block" style="animation-delay: 1s;"></div>
+
+            <!-- Content -->
+            <div class="relative z-10 container mx-auto px-6 py-20 mt-10">
+                <div class="max-w-5xl mx-auto text-center">
+                    
+                    <!-- Logo/Icon with Glow -->
+                    <div class="mb-8 flex justify-center animate-hero">
+                        <div class="relative group">
+                            <div class="absolute -inset-1 bg-[#5d51e8] rounded-full blur-xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                            <div class="relative w-24 h-24 bg-[#1a1a2e] rounded-full flex items-center justify-center border border-[#5d51e8]/50 shadow-[0_0_40px_rgba(93,81,232,0.6)]">
+                                <img src="../assets/LOGO.svg" alt="FireVision Logo" class="w-12 h-12 object-contain drop-shadow-[0_0_15px_rgba(93,81,232,0.9)]" />
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 animate-hero">
-                    FireVision – Deteksi Api & Asap AI
-                </h1>
+                    <!-- Headline -->
+                    <h1 class="mb-6 bg-gradient-to-r from-white via-white to-[#cfcfcf] bg-clip-text text-transparent font-bold leading-tight animate-hero title-responsive">
+                        FireVision – Deteksi Api AI
+                    </h1>
 
-                <p class="text-xl md:text-2xl text-gray-200 mb-12 animate-hero">
-                    Pemantauan api dan asap real-time yang didukung oleh kecerdasan buatan.
-                </p>
+                    <!-- Subheadline -->
+                    <p class="mb-10 text-[#cfcfcf] max-w-3xl mx-auto text-xl md:text-2xl leading-relaxed font-light animate-hero">
+                        Pemantauan api real-time yang didukung oleh kecerdasan buatan.
+                    </p>
 
-                <div
-                    class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-hero"
-                >
-                    <button
-                         @click="$router.push('/demo')"
-                        class="bg-[#3D31B0] text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-[#3D31B0]/60 flex items-center gap-2 hover:scale-105 group"
-                    >
-                        <svg
-                            class="w-5 h-5 group-hover:animate-pulse"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
+                    <!-- CTA Buttons -->
+                    <div class="flex flex-wrap gap-6 justify-center mb-12 animate-hero">
+                        <button 
+                            @click="$router.push('/demo')"
+                            class="flex items-center gap-3 px-8 py-4 bg-[#5d51e8] hover:bg-[#4a3eb8] text-white rounded-lg font-semibold text-lg shadow-lg shadow-[#5d51e8]/50 transition-all hover:shadow-xl hover:shadow-[#5d51e8]/60 hover:scale-105"
                         >
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path
-                                fill-rule="evenodd"
-                                d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                        <span
-                            class="group-hover:tracking-wide transition-all duration-300"
-                            >Coba Demo</span
+                            <!-- Video Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                            </svg>
+                            Coba Demo
+                        </button>
+                        
+                        <button 
+                            @click="$router.push('/features')"
+                            class="px-8 py-4 bg-transparent border-2 border-[#5d51e8] text-white hover:bg-[#5d51e8]/10 rounded-lg font-semibold text-lg backdrop-blur-sm transition-all hover:scale-105"
                         >
-                    </button>
+                            Mulai Sekarang
+                        </button>
+                    </div>
 
-                    <button
-                        @click="$router.push('/features')"
-                        class="bg-white text-gray-800 px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-white/30 hover:scale-[1.02] hover:-translate-y-1 group"
-                    >
-                        <span
-                            class="group-hover:tracking-wide transition-all duration-300"
-                            >Mulai Sekarang</span
-                        >
-                        <svg
-                            class="w-5 h-5 inline-block ml-2 group-hover:translate-x-1 transition-transform duration-300"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13 7l5 5m0 0l-5 5m5-5H6"
-                            />
-                        </svg>
-                    </button>
                 </div>
             </div>
-        </div>
+
+            <!-- Scroll Indicator -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 animate-bounce">
+                <div class="w-6 h-10 border-2 border-[#5d51e8] rounded-full flex justify-center pt-2">
+                    <div class="w-1 h-2 bg-[#5d51e8] rounded-full"></div>
+                </div>
+            </div>
+        </section>
 
         <FeaturesSection titlePosition="top" />
 
@@ -126,12 +126,13 @@ onMounted(() => {
     max-width: 100%;
 }
 
-.perspective-1000 {
-    perspective: 1000px;
+.title-responsive {
+    font-size: 2.5rem;
 }
-
-.hover\:translate-z-10:hover {
-    transform: translateZ(10px);
+@media (min-width: 768px) {
+    .title-responsive {
+        font-size: 4rem;
+    }
 }
 
 .animate-hero {

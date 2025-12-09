@@ -4,6 +4,8 @@ import Features from "../pages/Features.vue";
 import HowItWorks from "../pages/HowItWorks.vue";
 import Demo from "../pages/Demo.vue";
 import Pricing from "../pages/Pricing.vue";
+import History from "../pages/History.vue";
+import NotificationSettings from "../pages/NotificationSettings.vue";
 
 const routes = [
     { path: "/", name: "Home", component: Home },
@@ -11,6 +13,8 @@ const routes = [
     { path: "/how-it-works", name: "HowItWorks", component: HowItWorks },
     { path: "/demo", name: "Demo", component: Demo },
     { path: "/pricing", name: "Pricing", component: Pricing },
+    { path: "/history", name: "History", component: History },
+    { path: "/notifications", name: "NotificationSettings", component: NotificationSettings },
 ];
 
 const router = createRouter({

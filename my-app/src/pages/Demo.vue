@@ -62,6 +62,25 @@ onMounted(() => {
             <MultiCameraView />
         </div>
 
+        <!-- History & Settings Buttons -->
+        <div class="flex flex-wrap justify-center gap-4 mt-8 mb-12 animate-on-scroll">
+            <button 
+                @click="$router.push('/history')"
+                class="flex items-center gap-3 px-8 py-3 bg-[#1a1a2e] border border-[#2d2d48] hover:border-[#6C4DFF] hover:text-[#6C4DFF] text-gray-300 rounded-full font-semibold transition-all duration-300 group shadow-lg hover:shadow-[#6C4DFF]/20"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                Lihat Riwayat Deteksi
+            </button>
+
+            <button 
+                @click="$router.push('/notifications')"
+                class="flex items-center gap-3 px-8 py-3 bg-[#1a1a2e] border border-[#2d2d48] hover:border-[#FBBF24] hover:text-[#FBBF24] text-gray-300 rounded-full font-semibold transition-all duration-300 group shadow-lg hover:shadow-[#FBBF24]/20"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                Atur Notifikasi
+            </button>
+        </div>
+
         <Footer />
     </div>
 </template>

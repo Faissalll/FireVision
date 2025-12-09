@@ -17,7 +17,7 @@
           </div>
           
           <p class="text-sm text-gray-400 mb-6 max-w-xs">
-            Deteksi api dan asap bertenaga AI untuk dunia modern. Melindungi nyawa dan properti dengan teknologi mutakhir.
+            Deteksi api bertenaga AI untuk dunia modern. Melindungi nyawa dan properti dengan teknologi mutakhir.
           </p>
           
           <div class="flex space-x-3">
@@ -105,6 +105,8 @@ const productLinks = [
   { name: 'Fitur', path: '/features' },
   { name: 'Harga', path: '/pricing' },
   { name: 'Demo', path: '/demo' },
+  { name: 'Riwayat', path: '/history' },
+  { name: 'Notifikasi', path: '/notifications' },
   { name: 'Cara Kerja', path: '/how-it-works' },
 ]
 
