@@ -1,10 +1,10 @@
 <template>
     <section class="technical-architecture">
         <div class="container">
-            <h2 class="section-title">Technical Architecture</h2>
+            <h2 class="section-title">Arsitektur Teknis</h2>
             <p class="section-subtitle">
-                Built on enterprise-grade infrastructure with cutting-edge AI
-                technology
+                Dibangun di atas infrastruktur tingkat perusahaan dengan teknologi AI
+                mutakhir
             </p>
 
             <div class="architecture-grid">
@@ -35,18 +35,17 @@
                                 ></rect>
                             </svg>
                         </div>
-                        <h3 class="card-title">Video Input & Processing</h3>
+                        <h3 class="card-title">Input & Pemrosesan Video</h3>
                     </div>
                     <p class="card-description">
-                        FireVision supports multiple camera protocols and
-                        formats, processing video streams at up to 4K resolution
-                        with minimal latency.
+                        FireVision mendukung berbagai protokol dan format kamera,
+                        memproses aliran video hingga resolusi 4K dengan latensi minimal.
                     </p>
                     <ul class="feature-list">
-                        <li>ONVIF, RTSP, HTTP protocols</li>
-                        <li>Up to 4K resolution support</li>
-                        <li>H.264, H.265 codec support</li>
-                        <li>30+ FPS processing</li>
+                        <li>Protokol ONVIF, RTSP, HTTP</li>
+                        <li>Dukungan resolusi hingga 4K</li>
+                        <li>Dukungan codec H.264, H.265</li>
+                        <li>Pemrosesan 30+ FPS</li>
                     </ul>
                 </div>
                 <div class="architecture-card">
@@ -68,18 +67,17 @@
                                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
                             </svg>
                         </div>
-                        <h3 class="card-title">AI Detection Engine</h3>
+                        <h3 class="card-title">Mesin Deteksi AI</h3>
                     </div>
                     <p class="card-description">
-                        Our proprietary deep learning models use convolutional
-                        neural networks trained on millions of fire and smoke
-                        scenarios.
+                        Model deep learning kami menggunakan convolutional neural networks
+                        yang dilatih pada jutaan skenario api dan asap.
                     </p>
                     <ul class="feature-list">
-                        <li>YOLOv8 architecture</li>
-                        <li>Custom-trained models</li>
-                        <li>Real-time inference</li>
-                        <li>Continuous learning</li>
+                        <li>Arsitektur YOLOv8</li>
+                        <li>Model terlatih khusus</li>
+                        <li>Inferensi real-time</li>
+                        <li>Pembelajaran berkelanjutan</li>
                     </ul>
                 </div>
                 <div class="architecture-card">
@@ -108,12 +106,11 @@
                                 <line x1="12" y1="17" x2="12" y2="21"></line>
                             </svg>
                         </div>
-                        <h3 class="card-title">Edge Computing</h3>
+                        <h3 class="card-title">Komputasi Edge</h3>
                     </div>
                     <p class="card-description">
-                        Deploy AI processing at the edge for reduced latency and
-                        enhanced privacy, or use cloud processing for
-                        scalability.
+                        Terapkan pemrosesan AI di edge untuk mengurangi latency dan
+                        meningkatkan privasi, atau gunakan pemrosesan cloud untuk skalabilitas.
                     </p>
                     <ul class="feature-list">
                         <li>NVIDIA Jetson support</li>
@@ -142,17 +139,17 @@
                                 ></path>
                             </svg>
                         </div>
-                        <h3 class="card-title">Alert System</h3>
+                        <h3 class="card-title">Sistem Peringatan</h3>
                     </div>
                     <p class="card-description">
-                        Multi-channel notification system with customizable
-                        rules and escalation workflows for critical situations.
+                        Sistem notifikasi multi-saluran dengan aturan yang dapat disesuaikan
+                        dan alur kerja eskalasi untuk situasi kritis.
                     </p>
                     <ul class="feature-list">
-                        <li>SMS, Email, Push notifications</li>
-                        <li>Webhook integrations</li>
-                        <li>Escalation workflows</li>
-                        <li>Priority-based routing</li>
+                        <li>SMS, Email, Notifikasi Push</li>
+                        <li>Integrasi Webhook</li>
+                        <li>Alur kerja eskalasi</li>
+                        <li>Routing berbasis prioritas</li>
                     </ul>
                 </div>
             </div>

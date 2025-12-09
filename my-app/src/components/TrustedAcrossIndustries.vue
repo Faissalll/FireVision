@@ -1,19 +1,18 @@
 <template>
-    <div class="bg-[#0F0F1E] py-20 px-4">
+    <div ref="sectionRef" class="bg-[#0F0F1E] py-20 px-4">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                    Trusted Across Industries
+                    Terpercaya di Berbagai Industri
                 </h2>
                 <p class="text-xl text-gray-400">
-                    FireVision protects diverse sectors with tailored fire
-                    detection solutions
+                    FireVision melindungi beragam sektor dengan solusi deteksi kebakaran yang disesuaikan
                 </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div
-                    class="bg-[#1A1A2E] rounded-2xl overflow-hidden border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300"
+                    class="industry-card bg-[#1A1A2E] rounded-2xl overflow-hidden border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300"
                 >
                     <div
                         class="relative h-64 bg-gradient-to-b from-gray-700 to-gray-900"
@@ -47,11 +46,11 @@
 
                     <div class="p-8">
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            Industrial Facilities
+                            Fasilitas Industri
                         </h3>
                         <p class="text-gray-400 mb-6 leading-relaxed">
-                            Protect manufacturing plants, warehouses, and
-                            industrial complexes with 24/7 AI monitoring.
+                            Lindungi pabrik manufaktur, gudang, dan kompleks industri
+                            dengan pemantauan AI 24/7.
                         </p>
 
                         <ul class="space-y-3">
@@ -67,7 +66,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Chemical storage safety</span>
+                                <span>Keamanan penyimpanan bahan kimia</span>
                             </li>
                             <li class="flex items-center gap-3 text-gray-300">
                                 <svg
@@ -81,7 +80,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Equipment monitoring</span>
+                                <span>Pemantauan peralatan</span>
                             </li>
                             <li class="flex items-center gap-3 text-gray-300">
                                 <svg
@@ -95,14 +94,14 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Worker protection</span>
+                                <span>Perlindungan pekerja</span>
                             </li>
                         </ul>
                     </div>
                 </div>
 
                 <div
-                    class="bg-[#1A1A2E] rounded-2xl overflow-hidden border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300"
+                    class="industry-card bg-[#1A1A2E] rounded-2xl overflow-hidden border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300"
                 >
                     <div
                         class="relative h-64 bg-gradient-to-b from-gray-700 to-gray-900"
@@ -134,11 +133,11 @@
 
                     <div class="p-8">
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            Public Safety
+                            Keamanan Publik
                         </h3>
                         <p class="text-gray-400 mb-6 leading-relaxed">
-                            Deploy in airports, malls, hospitals, and public
-                            venues for enhanced safety measures.
+                            Terapkan di bandara, mal, rumah sakit, dan tempat umum
+                            untuk langkah-langkah keamanan yang ditingkatkan.
                         </p>
 
                         <ul class="space-y-3">
@@ -154,7 +153,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Crowd safety</span>
+                                <span>Keamanan keramaian</span>
                             </li>
                             <li class="flex items-center gap-3 text-gray-300">
                                 <svg
@@ -168,7 +167,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Critical infrastructure</span>
+                                <span>Infrastruktur kritis</span>
                             </li>
                             <li class="flex items-center gap-3 text-gray-300">
                                 <svg
@@ -182,14 +181,14 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Emergency response</span>
+                                <span>Respons darurat</span>
                             </li>
                         </ul>
                     </div>
                 </div>
 
                 <div
-                    class="bg-[#1A1A2E] rounded-2xl overflow-hidden border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300"
+                    class="industry-card bg-[#1A1A2E] rounded-2xl overflow-hidden border border-[#33333C] hover:border-[#4D41C0] hover:shadow-[0_0_30px_rgba(77,65,192,0.5)] transition-all duration-300"
                 >
                     <div
                         class="relative h-64 bg-gradient-to-b from-gray-700 to-gray-900"
@@ -221,11 +220,11 @@
 
                     <div class="p-8">
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            Residential
+                            Perumahan
                         </h3>
                         <p class="text-gray-400 mb-6 leading-relaxed">
-                            Smart fire detection for apartment buildings,
-                            condos, and residential communities.
+                            Deteksi kebakaran cerdas untuk gedung apartemen,
+                            kondominium, dan komunitas perumahan.
                         </p>
 
                         <ul class="space-y-3">
@@ -241,7 +240,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>24/7 home monitoring</span>
+                                <span>Pemantauan rumah 24/7</span>
                             </li>
                             <li class="flex items-center gap-3 text-gray-300">
                                 <svg
@@ -255,7 +254,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Family protection</span>
+                                <span>Perlindungan keluarga</span>
                             </li>
                             <li class="flex items-center gap-3 text-gray-300">
                                 <svg
@@ -269,7 +268,7 @@
                                         clip-rule="evenodd"
                                     />
                                 </svg>
-                                <span>Smart home integration</span>
+                                <span>Integrasi rumah pintar</span>
                             </li>
                         </ul>
                     </div>
@@ -278,3 +277,61 @@
         </div>
     </div>
 </template>
+
+<script setup>
+import { onMounted, ref } from 'vue';
+
+const sectionRef = ref(null);
+
+onMounted(() => {
+    if (!sectionRef.value) return;
+
+    // Use scoped querySelectorAll for reliability
+    const cards = sectionRef.value.querySelectorAll('.industry-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                // Add stagger effect
+                entry.target.style.transitionDelay = `${index * 0.2}s`;
+                entry.target.classList.remove('prepare-animate');
+                entry.target.classList.add('animate');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+
+    cards.forEach(card => {
+        card.classList.add('prepare-animate');
+        observer.observe(card);
+    });
+
+    // Failsafe: Force show after 3 seconds
+    setTimeout(() => {
+        cards.forEach(card => {
+             card.classList.remove('prepare-animate');
+             card.classList.add('animate');
+        });
+    }, 3000);
+});
+</script>
+
+<style scoped>
+.industry-card {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.6s ease-out;
+}
+
+.industry-card.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.industry-card.animate {
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>

@@ -6,10 +6,10 @@ import Footer from "../components/Footer.vue";
 <template>
     <div class="demo-page">
         <div class="demo-header">
-            <h1 class="demo-title">Interactive Demo</h1>
+            <h1 class="demo-title">Demo Interaktif</h1>
             <p class="demo-subtitle">
-                Experience FireVision's AI-powered fire detection in action.
-                Adjust settings and see real-time results.
+                Rasakan deteksi api bertenaga AI dari FireVision secara langsung.
+                Sesuaikan pengaturan dan lihat hasil secara real-time.
             </p>
         </div>
 

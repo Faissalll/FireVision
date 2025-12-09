@@ -17,7 +17,7 @@
           </div>
           
           <p class="text-sm text-gray-400 mb-6 max-w-xs">
-            AI-powered fire and smoke detection for the modern world. Protecting lives and property with cutting-edge technology.
+            Deteksi api dan asap bertenaga AI untuk dunia modern. Melindungi nyawa dan properti dengan teknologi mutakhir.
           </p>
           
           <div class="flex space-x-3">
@@ -30,7 +30,7 @@
         </div>
         
         <div>
-          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Product</h3>
+          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Produk</h3>
           <ul class="space-y-3">
             <li v-for="item in productLinks" :key="item.name">
               <a :href="item.href" class="text-sm hover:text-white transition-colors duration-200">{{ item.name }}</a>
@@ -39,7 +39,7 @@
         </div>
         
         <div>
-          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Company</h3>
+          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Perusahaan</h3>
           <ul class="space-y-3">
             <li v-for="item in companyLinks" :key="item.name">
               <a :href="item.href" class="text-sm hover:text-white transition-colors duration-200">{{ item.name }}</a>
@@ -48,7 +48,7 @@
         </div>
         
         <div>
-          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Resources</h3>
+          <h3 class="text-sm font-semibold text-white tracking-wider uppercase mb-4">Sumber Daya</h3>
           <ul class="space-y-3">
             <li v-for="item in resourceLinks" :key="item.name">
               <a :href="item.href" class="text-sm hover:text-white transition-colors duration-200">{{ item.name }}</a>
@@ -71,10 +71,10 @@
       
       <div class="mt-8 flex flex-col md:flex-row md:items-center md:justify-between">
         <p class="text-sm text-gray-500 text-center md:text-left">
-          &copy; 2025 FireVision. All rights reserved.
+          &copy; 2025 FireVision. Hak cipta dilindungi undang-undang.
         </p>
         <p class="text-sm text-gray-500 mt-4 md:mt-0 text-center md:text-right">
-          Built with AI &bull; Powered by Innovation
+          Dibangun dengan AI &bull; Didukung oleh Inovasi
         </p>
       </div>
       
@@ -84,31 +84,31 @@
 
 <script setup>
 const productLinks = [
-  { name: 'Features', href: '#' },
-  { name: 'Pricing', href: '#' },
+  { name: 'Fitur', href: '#' },
+  { name: 'Harga', href: '#' },
   { name: 'Demo', href: '#' },
-  { name: 'How It Works', href: '#' },
+  { name: 'Cara Kerja', href: '#' },
 ]
 
 const companyLinks = [
-  { name: 'About', href: '#' },
+  { name: 'Tentang', href: '#' },
   { name: 'Blog', href: '#' },
-  { name: 'Careers', href: '#' },
-  { name: 'Contact', href: '#' },
+  { name: 'Karir', href: '#' },
+  { name: 'Kontak', href: '#' },
 ]
 
 const resourceLinks = [
-  { name: 'Documentation', href: '#' },
-  { name: 'API Reference', href: '#' },
-  { name: 'Support', href: '#' },
-  { name: 'Community', href: '#' },
+  { name: 'Dokumentasi', href: '#' },
+  { name: 'Referensi API', href: '#' },
+  { name: 'Dukungan', href: '#' },
+  { name: 'Komunitas', href: '#' },
 ]
 
 const legalLinks = [
-  { name: 'Privacy', href: '#' },
-  { name: 'Terms', href: '#' },
-  { name: 'Security', href: '#' },
-  { name: 'Compliance', href: '#' },
+  { name: 'Privasi', href: '#' },
+  { name: 'Syarat', href: '#' },
+  { name: 'Keamanan', href: '#' },
+  { name: 'Kepatuhan', href: '#' },
 ]
 
 const socialIcons = [

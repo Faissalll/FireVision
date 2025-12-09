@@ -1,12 +1,12 @@
 <template>
-    <div class="bg-[#0F0F1E] py-20 px-4">
+    <div ref="sectionRef" class="bg-[#0F0F1E] py-20 px-4">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                    How It Works
+                    Cara Kerja
                 </h2>
                 <p class="text-xl text-gray-400">
-                    Three simple steps to complete fire safety protection
+                    Tiga langkah sederhana untuk perlindungan keamanan kebakaran yang lengkap
                 </p>
             </div>
 
@@ -46,11 +46,11 @@
                         </div>
 
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            Camera Captures
+                            Kamera Menangkap
                         </h3>
                         <p class="text-gray-400 leading-relaxed">
-                            High-resolution cameras continuously monitor your
-                            environment in real-time
+                            Kamera resolusi tinggi terus memantau lingkungan Anda
+                            secara real-time
                         </p>
                     </div>
 
@@ -106,11 +106,11 @@
                         </div>
 
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            AI Analyzes Smoke/Flame
+                            AI Menganalisis Asap/Api
                         </h3>
                         <p class="text-gray-400 leading-relaxed">
-                            Deep learning models detect fire and smoke patterns
-                            with 99.9% accuracy
+                            Model deep learning mendeteksi pola api dan asap
+                            dengan akurasi 99.9%
                         </p>
                     </div>
 
@@ -166,11 +166,11 @@
                         </div>
 
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            FireVision Sends Alert
+                            FireVision Mengirim Peringatan
                         </h3>
                         <p class="text-gray-400 leading-relaxed">
-                            Instant notifications sent to your team via SMS,
-                            email, and mobile app
+                            Notifikasi instan dikirim ke tim Anda melalui SMS,
+                            email, dan aplikasi seluler
                         </p>
                     </div>
                 </div>
@@ -180,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 
 const props = defineProps({
   delayAnimation: {
@@ -189,17 +189,23 @@ const props = defineProps({
   }
 })
 
-const cardRefs = ref([])
+const sectionRef = ref(null)
 
 onMounted(() => {
   const delay = props.delayAnimation ? 2000 : 0
 
   setTimeout(() => {
+    if (!sectionRef.value) return;
+    
+    // Use scoped querySelectorAll for reliability
+    const cards = sectionRef.value.querySelectorAll('.how-it-works-card');
+    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry, index) => {
           if (entry.isIntersecting) {
-            entry.target.style.animationDelay = `${index * 0.2}s`
+            entry.target.style.transitionDelay = `${index * 0.2}s`
+            entry.target.classList.remove('prepare-animate') 
             entry.target.classList.add('animate')
             observer.unobserve(entry.target)
           }
@@ -208,24 +214,39 @@ onMounted(() => {
       { threshold: 0.1 }
     )
 
-    cardRefs.value.forEach((card) => {
-      if (card) observer.observe(card)
+    cards.forEach((card) => {
+        // Hiding initially
+        card.classList.add('prepare-animate');
+        observer.observe(card);
     })
+
+    // Failsafe: Force show after 3 seconds if something goes wrong
+    setTimeout(() => {
+        cards.forEach(card => {
+             card.classList.remove('prepare-animate');
+             card.classList.add('animate');
+        });
+    }, 3000);
+
   }, delay)
 })
 </script>
 
 <style scoped>
 .how-it-works-card {
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Only hide if we explicitly want to animate and JS is ready */
+.how-it-works-card.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.how-it-works-card.animate {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

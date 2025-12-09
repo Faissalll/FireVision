@@ -303,6 +303,26 @@ def start_detection():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/update-settings', methods=['POST'])
+def update_settings():
+    global detection_settings
+    data = request.get_json() or {}
+    
+    # Update sensitivity if present
+    if 'sensitivity' in data:
+        detection_settings['sensitivity'] = data['sensitivity']
+        print(f"⚙️ Sensitivity updated to: {data['sensitivity']}")
+        
+    # Update other settings if needed
+    if 'smoothing' in data:
+        detection_settings['smoothing'] = data['smoothing']
+        
+    if 'noiseReduction' in data:
+        detection_settings['noiseReduction'] = data['noiseReduction']
+        
+    return jsonify({'status': 'updated', 'settings': detection_settings})
+
+
 @app.route('/api/stop-detection', methods=['POST'])
 def stop_detection():
     global camera, is_detecting, session_id
