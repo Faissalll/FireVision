@@ -7,6 +7,10 @@ import Pricing from "../pages/Pricing.vue";
 import History from "../pages/History.vue";
 import NotificationSettings from "../pages/NotificationSettings.vue";
 
+import Login from "../pages/Login.vue";
+import Register from "../pages/Register.vue";
+import Profile from "../pages/Profile.vue";
+
 const routes = [
     { path: "/", name: "Home", component: Home },
     { path: "/features", name: "Features", component: Features },
@@ -15,6 +19,9 @@ const routes = [
     { path: "/pricing", name: "Pricing", component: Pricing },
     { path: "/history", name: "History", component: History },
     { path: "/notifications", name: "NotificationSettings", component: NotificationSettings },
+    { path: "/login", name: "Login", component: Login },
+    { path: "/register", name: "Register", component: Register },
+    { path: "/profile", name: "Profile", component: Profile },
 ];
 
 const router = createRouter({

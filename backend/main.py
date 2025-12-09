@@ -380,9 +380,13 @@ def video_feed():
     )
 
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 def init_db():
     conn = sqlite3.connect('firevision.db')
     c = conn.cursor()
+    
+    # Table Alarms
     c.execute('''
         CREATE TABLE IF NOT EXISTS alarms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -395,11 +399,71 @@ def init_db():
             image_path TEXT
         )
     ''')
+    
+    # Table Users
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password TEXT
+        )
+    ''')
+    
     conn.commit()
     conn.close()
-    print("✅ Database initialized (firevision.db)")
+    print("✅ Database initialized (firevision.db: alarms, users)")
 
 init_db()
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username dan password wajib diisi'}), 400
+
+    hashed_password = generate_password_hash(password)
+
+    try:
+        conn = sqlite3.connect('firevision.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+        conn.commit()
+        conn.close()
+        return jsonify({'status': 'success', 'message': 'Registrasi berhasil!'})
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Username sudah digunakan'}), 409
+    except Exception as e:
+        print(f"Error register: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username dan password wajib diisi'}), 400
+
+    try:
+        conn = sqlite3.connect('firevision.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user['password'], password):
+            return jsonify({'status': 'success', 'message': 'Login berhasil', 'username': username})
+        else:
+            return jsonify({'error': 'Username atau password salah'}), 401
+            
+    except Exception as e:
+        print(f"Error login: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():

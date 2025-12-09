@@ -1,8 +1,18 @@
+<script setup>
+import Navbar from '../components/Navbar.vue';
+import Footer from '../components/Footer.vue';
+import PricingSection from '../components/PricingSection.vue';
+</script>
+
 <template>
-    <div class="min-h-screen bg-[#1a1625] text-white flex items-center justify-center">
-        <div class="text-center">
-            <h1 class="text-4xl font-bold mb-4">Harga & Paket</h1>
-            <p class="text-xl text-gray-400">Halaman ini sedang dalam pengembangan. Segera hadir!</p>
-        </div>
+    <div class="min-h-screen bg-[#050716] text-white font-sans selection:bg-[#6C4DFF] selection:text-white overflow-x-hidden">
+        <Navbar />
+        
+        <!-- Main Content -->
+        <main>
+            <PricingSection />
+        </main>
+        
+        <Footer />
     </div>
 </template>
