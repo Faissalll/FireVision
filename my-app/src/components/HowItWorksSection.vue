@@ -166,11 +166,10 @@
                         </div>
 
                         <h3 class="text-2xl font-bold text-white mb-4">
-                            FireVision Mengirim Peringatan
+                            FireVision Mengirim Notifikasi
                         </h3>
                         <p class="text-gray-400 leading-relaxed">
-                            Notifikasi instan dikirim ke tim Anda melalui SMS,
-                            email, dan aplikasi seluler
+                            Setelah api terdeteksi, sistem akan mengirim notifikasi langsung ke pengguna
                         </p>
                     </div>
                 </div>

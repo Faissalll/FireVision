@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto">
 
       <!-- Top Title (Conditional) -->
-      <div v-if="titlePosition === 'top'" class="text-center mb-16">
+      <div v-if="titlePosition === 'top'" class="text-center mb-8">
         <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
           Fitur Canggih
         </h2>
@@ -12,7 +12,7 @@
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
         <div 
           v-for="(feature, index) in features" 
@@ -60,24 +60,24 @@ const props = defineProps({
 
 const features = [
   {
-    title: "Deteksi Langsung",
-    description: "Identifikasi instan api dan asap menggunakan algoritma AI canggih dengan waktu respons milidetik.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>'
+    title: "Deteksi Cepat Kilat",
+    description: "Memproses umpan video secara real-time dengan waktu respons di bawah 1 detik untuk pencegahan dini.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>'
   },
   {
-    title: "Integrasi Multi-Kamera",
-    description: "Hubungkan dan pantau umpan beberapa kamera secara bersamaan di seluruh fasilitas Anda dengan mulus.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>'
+    title: "Tingkat Akurasi 99.9%",
+    description: "Model deep learning canggih yang dilatih pada jutaan dataset untuk meminimalkan alarm palsu.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
   },
   {
     title: "Dasbor Analitik",
-    description: "Visualisasi data komprehensif dan alat pelaporan untuk melacak insiden dan kinerja sistem.",
+    description: "Pantau status keamanan fasilitas Anda dalam satu tampilan terpusat dengan statistik real-time.",
     icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>'
   },
   {
-    title: "Ambang Peringatan Kustom",
-    description: "Konfigurasikan sensitivitas deteksi dan parameter peringatan yang disesuaikan dengan lingkungan spesifik Anda.",
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>'
+    title: "Integrasi Multi-Kamera",
+    description: "Satu sistem untuk semua kamera. Gabungkan CCTV gudang, kantor, dan area luar dalam satu layar pemantauan yang mudah.",
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>'
   }
 ]
 
