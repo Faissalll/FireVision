@@ -1,9 +1,11 @@
 <script setup>
 import DemoFire from "../components/DemoFire.vue";
+import MultiCameraView from "../components/MultiCameraView.vue";
 import Footer from "../components/Footer.vue";
 import { onMounted, ref } from 'vue';
 
 const pageRef = ref(null);
+const isMultiCamera = ref(false);
 
 onMounted(() => {
     if (!pageRef.value) return;
@@ -34,9 +36,31 @@ onMounted(() => {
                 Rasakan deteksi api bertenaga AI dari FireVision secara langsung.
                 Sesuaikan pengaturan dan lihat hasil secara real-time.
             </p>
+            
+            <div class="mode-switch animate-on-scroll">
+                 <button 
+                    class="switch-btn" 
+                    :class="{ active: !isMultiCamera }"
+                    @click="isMultiCamera = false"
+                >
+                    Single Camera
+                </button>
+                <button 
+                    class="switch-btn" 
+                    :class="{ active: isMultiCamera }"
+                    @click="isMultiCamera = true"
+                >
+                    Multi-Camera (4x)
+                </button>
+            </div>
         </div>
 
-        <DemoFire />
+        <div v-if="!isMultiCamera">
+            <DemoFire />
+        </div>
+        <div v-else>
+            <MultiCameraView />
+        </div>
 
         <Footer />
     </div>
@@ -68,6 +92,36 @@ onMounted(() => {
     max-width: 800px;
     margin: 0 auto;
     line-height: 1.6;
+}
+
+.mode-switch {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.switch-btn {
+    padding: 10px 24px;
+    border-radius: 30px;
+    border: 2px solid #2d2d48;
+    background: transparent;
+    color: #b0b0c3;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.switch-btn.active {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+    color: white;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+}
+
+.switch-btn:hover:not(.active) {
+    border-color: #8b5cf6;
+    color: white;
 }
 
 

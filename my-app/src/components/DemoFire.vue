@@ -351,9 +351,13 @@ const playDemo = async () => {
 
 const stopDetection = async () => {
     try {
-        await fetch(`${API_BASE_URL}/api/stop-detection`, {
-            method: "POST",
-        });
+        if (sessionId.value) {
+            await fetch(`${API_BASE_URL}/api/stop-detection`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ session_id: sessionId.value }),
+            });
+        }
     } catch (err) {
         console.error(err);
     } finally {
@@ -737,7 +741,7 @@ onMounted(() => {
             <div class="container">
                 <h2 class="section-title animate-on-scroll">Pengaturan & Skenario</h2>
                 <p class="section-subtitle animate-on-scroll">
-                    Sesuaikan parameter deteksi dan uji dengan kamera Anda
+                     Sesuaikan parameter deteksi dan uji dengan kamera Anda
                 </p>
 
                 <div class="demo-grid">
@@ -972,6 +976,7 @@ onMounted(() => {
 }
 .error-close:hover {
     opacity: 1;
+    cursor: pointer;
 }
 .video-container {
     max-width: 1200px;
