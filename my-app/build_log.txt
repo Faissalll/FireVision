@@ -1,0 +1,20 @@
+
+> my-app@0.0.0 build
+> vite build
+
+[36mvite v7.1.12 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 99 modules transformed.
+[31m✗[39m Build failed in 1.05s
+[31merror during build:
+[31m[vite:prepare-out-dir] EBUSY: resource busy or locked, rmdir 'D:\Semester 5\IPPL\LastwebFRv\FireVision\my-app\dist\assets'[31m
+    at rmdirSync (node:fs:1201:11)
+    at _rmdirSync (node:internal/fs/rimraf:236:5)
+    at rimrafSync (node:internal/fs/rimraf:194:7)
+    at Object.rmSync (node:fs:1247:10)
+    at emptyDir (file:///D:/Semester%205/IPPL/LastwebFRv/FireVision/my-app/node_modules/vite/dist/node/chunks/config.js:2341:11)
+    at prepareOutDir (file:///D:/Semester%205/IPPL/LastwebFRv/FireVision/my-app/node_modules/vite/dist/node/chunks/config.js:33559:55)
+    at Object.handler (file:///D:/Semester%205/IPPL/LastwebFRv/FireVision/my-app/node_modules/vite/dist/node/chunks/config.js:33549:6)
+    at Object.handler (file:///D:/Semester%205/IPPL/LastwebFRv/FireVision/my-app/node_modules/vite/dist/node/chunks/config.js:33973:13)
+    at file:///D:/Semester%205/IPPL/LastwebFRv/FireVision/my-app/node_modules/rollup/dist/es/shared/node-entry.js:22426:40
+    at async Promise.all (index 0)[39m

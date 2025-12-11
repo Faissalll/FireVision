@@ -4,8 +4,34 @@ import MultiCameraView from "../components/MultiCameraView.vue";
 import Footer from "../components/Footer.vue";
 import { onMounted, ref } from 'vue';
 
+import Modal from "../components/Modal.vue";
+
 const pageRef = ref(null);
-const isMultiCamera = ref(false);
+const cameraMode = ref('single'); // 'single', 'multi2', 'multi4'
+
+// Modal State
+const showModal = ref(false);
+const modalTitle = ref("");
+const modalMessage = ref("");
+
+
+const handleModeChange = (mode) => {
+    if (mode === 'multi4') {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : {};
+        if (user.plan !== 'premium' && user.username !== 'admin') { 
+            // Simple check, assumming 'admin' or explicit 'premium' plan
+            // Since default is 'free', strictly check for free
+            if (!user.plan || user.plan === 'free') {
+                modalTitle.value = "Fitur Premium";
+                modalMessage.value = "Fitur Multi-Camera (4x) khusus untuk pengguna Premium. Silakan upgrade plan Anda untuk akses penuh!";
+                showModal.value = true;
+                return;
+            }
+        }
+    }
+    cameraMode.value = mode;
+};
 
 onMounted(() => {
     if (!pageRef.value) return;
@@ -40,48 +66,65 @@ onMounted(() => {
             <div class="mode-switch animate-on-scroll">
                  <button 
                     class="switch-btn" 
-                    :class="{ active: !isMultiCamera }"
-                    @click="isMultiCamera = false"
+                    :class="{ active: cameraMode === 'single' }"
+                    @click="handleModeChange('single')"
                 >
                     Single Camera
                 </button>
                 <button 
                     class="switch-btn" 
-                    :class="{ active: isMultiCamera }"
-                    @click="isMultiCamera = true"
+                    :class="{ active: cameraMode === 'multi2' }"
+                    @click="handleModeChange('multi2')"
+                >
+                    Multi-Camera (2x)
+                </button>
+                <button 
+                    class="switch-btn" 
+                    :class="{ active: cameraMode === 'multi4' }"
+                    @click="handleModeChange('multi4')"
                 >
                     Multi-Camera (4x)
                 </button>
             </div>
+
+            <!-- History & Settings Buttons -->
+            <div class="flex flex-wrap justify-center gap-4 mt-8 animate-on-scroll">
+                <button 
+                    @click="$router.push('/history')"
+                    class="flex items-center gap-3 px-6 py-2 bg-[#1a1a2e]/50 border border-[#2d2d48] hover:border-[#6C4DFF] hover:text-[#6C4DFF] text-gray-300 rounded-full font-semibold transition-all duration-300 group shadow-lg hover:shadow-[#6C4DFF]/20 text-sm"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                    Riwayat Deteksi
+                </button>
+
+                <button 
+                    @click="$router.push('/notifications')"
+                    class="flex items-center gap-3 px-6 py-2 bg-[#1a1a2e]/50 border border-[#2d2d48] hover:border-[#FBBF24] hover:text-[#FBBF24] text-gray-300 rounded-full font-semibold transition-all duration-300 group shadow-lg hover:shadow-[#FBBF24]/20 text-sm"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    Atur Notifikasi
+                </button>
+            </div>
         </div>
 
-        <div v-if="!isMultiCamera">
+        <div v-if="cameraMode === 'single'">
             <DemoFire />
         </div>
         <div v-else>
-            <MultiCameraView />
+            <MultiCameraView :maxCameras="cameraMode === 'multi4' ? 4 : 2" />
         </div>
 
-        <!-- History & Settings Buttons -->
-        <div class="flex flex-wrap justify-center gap-4 mt-8 mb-12 animate-on-scroll">
-            <button 
-                @click="$router.push('/history')"
-                class="flex items-center gap-3 px-8 py-3 bg-[#1a1a2e] border border-[#2d2d48] hover:border-[#6C4DFF] hover:text-[#6C4DFF] text-gray-300 rounded-full font-semibold transition-all duration-300 group shadow-lg hover:shadow-[#6C4DFF]/20"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-                Lihat Riwayat Deteksi
-            </button>
 
-            <button 
-                @click="$router.push('/notifications')"
-                class="flex items-center gap-3 px-8 py-3 bg-[#1a1a2e] border border-[#2d2d48] hover:border-[#FBBF24] hover:text-[#FBBF24] text-gray-300 rounded-full font-semibold transition-all duration-300 group shadow-lg hover:shadow-[#FBBF24]/20"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                Atur Notifikasi
-            </button>
-        </div>
 
         <Footer />
+        
+        <!-- Custom Modal -->
+        <Modal 
+            :isOpen="showModal" 
+            :title="modalTitle" 
+            :message="modalMessage" 
+            @close="showModal = false" 
+        />
     </div>
 </template>
 
