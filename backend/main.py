@@ -10,8 +10,11 @@ import math
 import numpy as np  
 
 from telegram_notifier import TelegramNotifier
-import sqlite3
+import mysql.connector
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 app = Flask(__name__)
 
 CORS(app, resources={
@@ -28,10 +31,10 @@ model = None
 
 try:
     notifier = TelegramNotifier(
-        token="8092461515:AAH1mB855P5-joxZ-eZQ3dBNKmqvO9yipSc",  
-        chat_id="1805496530",                                    
+        token=os.getenv("TELEGRAM_BOT_TOKEN"),
+        chat_id=os.getenv("TELEGRAM_CHAT_ID"),
     )
-    print("✅ Telegram Notifier aktif (hardcode)")
+    print("✅ Telegram Notifier konfigurasi dari .env")
 except Exception as e:
     notifier = None
     print(f"⚠️ Telegram Notifier tidak aktif: {e}")
@@ -174,7 +177,12 @@ def generate_frames(session_id):
                         print("📨 Telegram alert sent.")
                         
                         try:
-                            conn = sqlite3.connect('firevision.db')
+                            conn = mysql.connector.connect(
+                                host=os.getenv('DB_HOST', 'localhost'),
+                                user=os.getenv('DB_USER', 'root'),
+                                password=os.getenv('DB_PASSWORD', ''),
+                                database=os.getenv('DB_NAME', 'firevision')
+                            )
                             c = conn.cursor()
                             
                             max_conf = 0
@@ -184,7 +192,7 @@ def generate_frames(session_id):
                             
                             c.execute('''
                                 INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
-                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
                             ''', (
                                 session_id,
                                 datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -245,6 +253,36 @@ def start_detection():
         
         data = request.get_json() or {}
 
+        username = data.get('username')
+        if not username:
+             return jsonify({'error': 'Username required'}), 400
+
+        # Enforce Camera Limits
+        active_count = 0
+        for s_id, s_data in sessions.items():
+            if s_data.get('owner') == username and s_data.get('is_detecting'):
+                active_count += 1
+        
+        # Check Plan
+        user_plan = 'free' # Default
+        try:
+            conn = get_db_connection()
+            c = conn.cursor(dictionary=True)
+            c.execute("SELECT plan FROM users WHERE username = %s", (username,))
+            row = c.fetchone()
+            if row:
+                user_plan = row['plan']
+            conn.close()
+        except Exception as e:
+            print(f"Error checking plan: {e}")
+
+        MAX_FREE_CAMERAS = 2
+        
+        if user_plan == 'free' and active_count >= MAX_FREE_CAMERAS:
+            return jsonify({
+                'error': f'Limit Tercapai! Pengguna Free hanya bisa menggunakan {MAX_FREE_CAMERAS} kamera. Upgrade ke Premium untuk akses unlimited.'
+            }), 403
+
         camera_source = str(data.get('camera_source', 'WEBCAM')).upper()
         ip_camera_url = data.get('ip_camera_url') 
 
@@ -296,7 +334,9 @@ def start_detection():
             "last_frame_w": 0,
             "last_frame_h": 0,
             "fire_was_detected": False,
-            "frame_counter": 0
+            "fire_was_detected": False,
+            "frame_counter": 0,
+            "owner": username
         }
 
         print(f"✅ Camera Session Started! ID: {session_id_str}")
@@ -382,36 +422,72 @@ def video_feed():
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.getenv('DB_HOST', 'localhost'),
+        user=os.getenv('DB_USER', 'root'),
+        password=os.getenv('DB_PASSWORD', ''),
+        database=os.getenv('DB_NAME', 'firevision')
+    )
+
 def init_db():
-    conn = sqlite3.connect('firevision.db')
-    c = conn.cursor()
-    
-    # Table Alarms
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS alarms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            uuid TEXT,
-            timestamp TEXT,
-            camera_id TEXT,
-            zone TEXT,
-            confidence REAL,
-            status TEXT, 
-            image_path TEXT
+    conn = None
+    try:
+        # Connect to MySQL Server first to create DB if not exists
+        conn = mysql.connector.connect(
+            host=os.getenv('DB_HOST', 'localhost'),
+            user=os.getenv('DB_USER', 'root'),
+            password=os.getenv('DB_PASSWORD', '')
         )
-    ''')
-    
-    # Table Users
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    print("✅ Database initialized (firevision.db: alarms, users)")
+        c = conn.cursor()
+        db_name = os.getenv('DB_NAME', 'firevision')
+        c.execute(f"CREATE DATABASE IF NOT EXISTS {db_name}")
+        conn.close()
+
+        # Connect to the specific database
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Table Alarms
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS alarms (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                uuid VARCHAR(255),
+                timestamp VARCHAR(255),
+                camera_id VARCHAR(255),
+                zone VARCHAR(255),
+                confidence REAL,
+                status VARCHAR(50), 
+                image_path TEXT
+            )
+        ''')
+        
+        # Table Users
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(255) UNIQUE,
+                password VARCHAR(255),
+                plan VARCHAR(50) DEFAULT 'free'
+            )
+        ''')
+
+        # Migration: Add plan column if not exists (for existing tables)
+        try:
+            c.execute("SELECT plan FROM users LIMIT 1")
+            c.fetchall() 
+        except Exception:
+            print("⚠️ 'plan' column missing in users. Adding it...")
+            try:
+                c.execute("ALTER TABLE users ADD COLUMN plan VARCHAR(50) DEFAULT 'free'")
+            except Exception as e_alter:
+                print(f"❌ Failed to alter table: {e_alter}")
+        
+        conn.commit()
+        conn.close()
+        print(f"✅ Database initialized ({db_name}: alarms, users)")
+    except Exception as e:
+        print(f"❌ Error initializing DB: {e}")
 
 init_db()
 
@@ -427,14 +503,17 @@ def register():
     hashed_password = generate_password_hash(password)
 
     try:
-        conn = sqlite3.connect('firevision.db')
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+        # Default plan is 'free'
+        c.execute("INSERT INTO users (username, password, plan) VALUES (%s, %s, 'free')", (username, hashed_password))
         conn.commit()
         conn.close()
         return jsonify({'status': 'success', 'message': 'Registrasi berhasil!'})
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'Username sudah digunakan'}), 409
+    except mysql.connector.Error as err:
+        if err.errno == 1062: # Duplicate entry
+            return jsonify({'error': 'Username sudah digunakan'}), 409
+        return jsonify({'error': str(err)}), 500
     except Exception as e:
         print(f"Error register: {e}")
         return jsonify({'error': str(e)}), 500
@@ -449,15 +528,19 @@ def login():
         return jsonify({'error': 'Username dan password wajib diisi'}), 400
 
     try:
-        conn = sqlite3.connect('firevision.db')
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE username = ?", (username,))
+        conn = get_db_connection()
+        c = conn.cursor(dictionary=True)
+        c.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = c.fetchone()
         conn.close()
 
         if user and check_password_hash(user['password'], password):
-            return jsonify({'status': 'success', 'message': 'Login berhasil', 'username': username})
+            return jsonify({
+                'status': 'success', 
+                'message': 'Login berhasil', 
+                'username': username,
+                'plan': user.get('plan', 'free') 
+            })
         else:
             return jsonify({'error': 'Username atau password salah'}), 401
             
@@ -476,9 +559,8 @@ def health_check():
 @app.route('/api/history', methods=['GET'])
 def get_history():
     try:
-        conn = sqlite3.connect('firevision.db')
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
+        conn = get_db_connection()
+        c = conn.cursor(dictionary=True)
         
         c.execute("SELECT * FROM alarms ORDER BY id DESC")
         rows = c.fetchall()
@@ -515,9 +597,9 @@ def update_history_status():
         return jsonify({'error': 'Missing db_id or status'}), 400
         
     try:
-        conn = sqlite3.connect('firevision.db')
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute("UPDATE alarms SET status = ? WHERE id = ?", (new_status, db_id))
+        c.execute("UPDATE alarms SET status = %s WHERE id = %s", (new_status, db_id))
         conn.commit()
         conn.close()
         return jsonify({'status': 'updated', 'db_id': db_id, 'new_status': new_status})
@@ -597,4 +679,4 @@ if __name__ == '__main__':
     load_model()
     
     print("\nMenunggu koneksi...")
-    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)

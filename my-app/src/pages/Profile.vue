@@ -6,24 +6,52 @@ import Footer from "../components/Footer.vue";
 
 const router = useRouter();
 const user = ref(null);
+const isEditing = ref(false);
+const editForm = ref({
+  username: ""
+});
 
 onMounted(() => {
   const storedUser = localStorage.getItem("user");
   if (storedUser) {
     user.value = JSON.parse(storedUser);
+    editForm.value.username = user.value.username;
   } else {
     router.push("/login"); // Redirect if not logged in
   }
 });
 
+const toggleEdit = () => {
+  isEditing.value = !isEditing.value;
+  if (isEditing.value) {
+    editForm.value.username = user.value.username;
+  }
+};
+
+const saveProfile = () => {
+  if (!editForm.value.username.trim()) {
+    alert("Username tidak boleh kosong");
+    return;
+  }
+
+  // Update local object
+  user.value.username = editForm.value.username;
+  
+  // Update localStorage
+  localStorage.setItem("user", JSON.stringify(user.value));
+  
+  // Exit edit mode
+  isEditing.value = false;
+  alert("Profil berhasil diperbarui!");
+  
+  // Optional: Force reload to update Navbar if not using reactive store globally yet
+  // window.location.reload(); 
+  // Better: emits or simple alert is enough for now as requested "Mock/Simple"
+};
+
 const handleLogout = () => {
   localStorage.removeItem("user");
   router.push("/");
-  // Refresh page to update Navbar state implies a reload or we can use an event bus/pinia. 
-  // For simplicity doing a full reload or letting Navbar handle it via router check if we had global state.
-  // Ideally Navbar reacts to localStorage changes or we use a reactive state management.
-  // For now simple router push, Navbar needs to know. 
-  // We'll address Navbar reactivity in the Navbar component update.
   window.location.href = "/"; 
 };
 </script>
@@ -49,7 +77,13 @@ const handleLogout = () => {
           <div class="flex-grow space-y-6">
             <div>
               <label class="block text-sm text-gray-500 mb-1">Username</label>
-              <div class="text-xl font-semibold">{{ user.username }}</div>
+              <div v-if="!isEditing" class="text-xl font-semibold">{{ user.username }}</div>
+              <input 
+                v-else
+                v-model="editForm.username"
+                type="text"
+                class="bg-[#151926] border border-gray-700 rounded px-3 py-1 text-white focus:outline-none focus:border-[#6C4DFF]"
+              />
             </div>
 
             <div>
@@ -70,9 +104,27 @@ const handleLogout = () => {
 
           <!-- Actions -->
           <div class="flex flex-col gap-3 w-full md:w-auto">
-            <button class="px-6 py-2 border border-gray-600 hover:border-gray-400 rounded-lg transition-colors text-sm">
+            <button 
+              v-if="!isEditing"
+              @click="toggleEdit"
+              class="px-6 py-2 border border-gray-600 hover:border-gray-400 rounded-lg transition-colors text-sm"
+            >
               Edit Profil
             </button>
+            <div v-else class="flex flex-col gap-2">
+                <button 
+                  @click="saveProfile"
+                  class="px-6 py-2 bg-[#6C4DFF] hover:bg-[#5839EE] text-white rounded-lg transition-colors text-sm"
+                >
+                  Simpan
+                </button>
+                <button 
+                  @click="toggleEdit"
+                  class="px-6 py-2 border border-gray-600 hover:border-gray-400 rounded-lg transition-colors text-sm"
+                >
+                  Batal
+                </button>
+            </div>
             <button @click="handleLogout" class="px-6 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors text-sm border border-red-500/20">
               Keluar
             </button>

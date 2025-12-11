@@ -1,28 +1,77 @@
 <script setup>
 import { ref, onUnmounted } from 'vue';
 
-const API_BASE_URL = "http://127.0.0.1:5001";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
 
-// 4 Slot Kamera
-const cameras = ref([
+const props = defineProps({
+    maxCameras: {
+        type: Number,
+        default: 4
+    }
+});
+
+// Original Data Source
+const allCameras = ref([
     { id: 1, name: "Kamera 1", source: "WEBCAM", url: "", isRunning: false, sessionId: null, detections: [] },
     { id: 2, name: "Kamera 2", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [] },
     { id: 3, name: "Kamera 3", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [] },
     { id: 4, name: "Kamera 4", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [] },
 ]);
 
+// Computed to filter based on prop
+import { computed } from 'vue';
+const cameras = computed(() => {
+    return allCameras.value.slice(0, props.maxCameras);
+});
+
 // Poller ID storage
 const pollers = {};
+
+// LOAD & SAVE CAMERA NAMES
+import { watch, onMounted } from 'vue';
+
+onMounted(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+        const user = JSON.parse(userStr);
+        const username = user.username || "guest";
+        const savedNames = localStorage.getItem(`camera_names_${username}`);
+        
+        if (savedNames) {
+            const names = JSON.parse(savedNames);
+            allCameras.value.forEach((cam, index) => {
+                if (names[index]) cam.name = names[index];
+            });
+        }
+
+        // Watch for changes and save (Use allCameras to persist even hidden ones if modified)
+        watch(allCameras, (newVal) => {
+            const namesToSave = newVal.map(c => c.name);
+            localStorage.setItem(`camera_names_${username}`, JSON.stringify(namesToSave));
+        }, { deep: true });
+    }
+});
 
 const startCamera = async (index) => {
     const cam = cameras.value[index];
     if (cam.isRunning) return;
 
+    // VALIDATION: Check URL for IP Camera
+    if (cam.source === "IP_CAMERA" && !cam.url.trim()) {
+        alert("Mohon masukkan URL kamera terlebih dahulu (contoh: http://192.168.1.5:8080/video).");
+        return;
+    }
+
     try {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const username = user?.username || "guest";
+
         const payload = {
             camera_source: cam.source,
             ip_camera_url: cam.url,
-            sensitivity: 70 // default
+            sensitivity: 70, // default
+            username: username
         };
 
         const response = await fetch(`${API_BASE_URL}/api/start-detection`, {
@@ -33,7 +82,11 @@ const startCamera = async (index) => {
 
         if (!response.ok) {
             const err = await response.json();
-            alert(`Gagal start kamera ${cam.id}: ${err.error}`);
+            if (response.status === 403) {
+                 alert(err.error || "Limit Camera Reached!");
+            } else {
+                 alert(`Gagal start kamera ${cam.id}: ${err.error}`);
+            }
             return;
         }
 
@@ -86,7 +139,7 @@ const fetchDetections = async (index) => {
 };
 
 const stopAll = () => {
-    cameras.value.forEach((cam, idx) => {
+    allCameras.value.forEach((cam, idx) => {
         if (cam.isRunning) stopCamera(idx);
     });
 };
@@ -98,7 +151,7 @@ onUnmounted(() => {
 
 <template>
     <div class="multi-camera-container">
-        <h2 class="title">Multi-Camera Monitor (4 Channels)</h2>
+        <h2 class="title">Multi-Camera Monitor ({{ maxCameras }} Channels)</h2>
         
         <div class="grid-container">
             <div v-for="(cam, index) in cameras" :key="cam.id" class="camera-card">

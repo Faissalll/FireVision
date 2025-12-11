@@ -11,6 +11,24 @@ import Login from "../pages/Login.vue";
 import Register from "../pages/Register.vue";
 import Profile from "../pages/Profile.vue";
 
+// Footer Pages - Company
+import About from "../pages/About.vue";
+import Blog from "../pages/Blog.vue";
+import Careers from "../pages/Careers.vue";
+import Contact from "../pages/Contact.vue";
+
+// Footer Pages - Resources
+import Documentation from "../pages/Documentation.vue";
+import ApiReference from "../pages/ApiReference.vue";
+import Support from "../pages/Support.vue";
+import Community from "../pages/Community.vue";
+
+// Footer Pages - Legal
+import Privacy from "../pages/Privacy.vue";
+import Terms from "../pages/Terms.vue";
+import Security from "../pages/Security.vue";
+import Compliance from "../pages/Compliance.vue";
+
 const routes = [
     { path: "/", name: "Home", component: Home },
     { path: "/features", name: "Features", component: Features },
@@ -22,6 +40,22 @@ const routes = [
     { path: "/login", name: "Login", component: Login },
     { path: "/register", name: "Register", component: Register },
     { path: "/profile", name: "Profile", component: Profile },
+
+    // Footer Routes
+    { path: "/about", name: "About", component: About },
+    { path: "/blog", name: "Blog", component: Blog },
+    { path: "/careers", name: "Careers", component: Careers },
+    { path: "/contact", name: "Contact", component: Contact },
+
+    { path: "/documentation", name: "Documentation", component: Documentation },
+    { path: "/api-reference", name: "ApiReference", component: ApiReference },
+    { path: "/support", name: "Support", component: Support },
+    { path: "/community", name: "Community", component: Community },
+
+    { path: "/privacy", name: "Privacy", component: Privacy },
+    { path: "/terms", name: "Terms", component: Terms },
+    { path: "/security", name: "Security", component: Security },
+    { path: "/compliance", name: "Compliance", component: Compliance },
 ];
 
 const router = createRouter({

@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import Navbar from "../components/Navbar.vue";
 import Footer from "../components/Footer.vue";
+import { auth } from "../store/auth";
 
 const router = useRouter();
 const username = ref("");
@@ -15,7 +16,7 @@ const handleLogin = async () => {
   errorMessage.value = "";
 
   try {
-    const response = await fetch("http://localhost:5001/api/login", {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -27,8 +28,11 @@ const handleLogin = async () => {
     const data = await response.json();
 
     if (response.ok) {
-      // Store user session (simple localstorage for now)
-      localStorage.setItem("user", JSON.stringify({ username: data.username }));
+      // Store user session via reactive store
+      auth.login({ 
+        username: data.username,
+        plan: data.plan 
+      });
       router.push("/demo"); 
     } else {
       errorMessage.value = data.error || "Login gagal";
