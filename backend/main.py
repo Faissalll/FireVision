@@ -10,11 +10,24 @@ import math
 import numpy as np  
 
 from telegram_notifier import TelegramNotifier
+from sms_notifier import SMSNotifier
 import mysql.connector
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+
+def load_env_manual(path):
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
+load_env_manual(env_path)
+print(f"🔑 TELEGRAM_BOT_TOKEN loaded: {os.getenv('TELEGRAM_BOT_TOKEN', 'NOT FOUND')[:20]}...")
 app = Flask(__name__)
 
 CORS(app, resources={
@@ -29,15 +42,36 @@ sessions = {}
 
 model = None
 
-try:
-    notifier = TelegramNotifier(
-        token=os.getenv("TELEGRAM_BOT_TOKEN"),
-        chat_id=os.getenv("TELEGRAM_CHAT_ID"),
-    )
-    print("✅ Telegram Notifier konfigurasi dari .env")
-except Exception as e:
+telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+if telegram_token and telegram_chat_id and telegram_token != "YOUR_TELEGRAM_BOT_TOKEN":
+    try:
+        notifier = TelegramNotifier(
+            token=telegram_token,
+            chat_id=telegram_chat_id,
+        )
+        print("✅ Telegram Notifier konfigurasi dari .env")
+    except Exception as e:
+        notifier = None
+        print(f"⚠️ Telegram Notifier tidak aktif: {e}")
+else:
     notifier = None
-    print(f"⚠️ Telegram Notifier tidak aktif: {e}")
+    print(f"⚠️ Telegram Notifier tidak aktif: Token atau Chat ID kosong/invalid")
+
+try:
+    sms_notifier = SMSNotifier(
+        api_key=os.getenv("FONNTE_API_KEY", "")
+    )
+    sms_phone = os.getenv("SMS_PHONE_NUMBER", "")
+    if sms_phone and os.getenv("FONNTE_API_KEY"):
+        print("✅ SMS Notifier konfigurasi dari .env")
+    else:
+        sms_notifier = None
+        print("⚠️ SMS Notifier tidak aktif: API Key atau nomor HP kosong")
+except Exception as e:
+    sms_notifier = None
+    print(f"⚠️ SMS Notifier tidak aktif: {e}")
 
 
 def load_model():
@@ -169,12 +203,25 @@ def generate_frames(session_id):
             if notifier is not None:
                 if fire_detected and not session["fire_was_detected"]:
                     session["fire_was_detected"] = True
+                    camera_display_name = session.get("camera_name", f"Camera {session_id[:4]}")
                     try:
                         notifier.send_notification(
-                            f"🔥 FireVision Alert (Cam {session_id[:4]}) — Api terdeteksi!",
+                            f"🔥 FireVision Alert ({camera_display_name}) — Api terdeteksi!",
                             frame=processed_frame
                         )
                         print("📨 Telegram alert sent.")
+                        
+                        if sms_notifier is not None and os.getenv("SMS_PHONE_NUMBER"):
+                            try:
+                                sms_notifier.send_fire_alert(
+                                    phone_number=os.getenv("SMS_PHONE_NUMBER"),
+                                    camera_id=camera_display_name
+                                )
+                                print("📱 SMS/WhatsApp alert sent.")
+
+                                print("📱 SMS/WhatsApp alert sent.")
+                            except Exception as sms_e:
+                                print(f"❌ Gagal kirim SMS: {sms_e}")
                         
                         try:
                             conn = mysql.connector.connect(
@@ -211,16 +258,9 @@ def generate_frames(session_id):
                     except Exception as e:
                         print(f"❌ Gagal kirim Telegram: {e}")
 
+
                 elif not fire_detected and session["fire_was_detected"]:
                     session["fire_was_detected"] = False
-                    try:
-                        notifier.send_notification(
-                            f"✅ Api telah padam (Cam {session_id[:4]}) — kondisi aman."
-                        )
-                        print("📨 Telegram cleared sent.")
-                        
-                    except Exception as e:
-                        print(f"❌ Gagal kirim Telegram: {e}")
 
             ret, buffer = cv2.imencode('.jpg', processed_frame)
             if not ret:
@@ -295,6 +335,9 @@ def start_detection():
             "playbackControls": data.get("playbackControls", False),
         }
         
+        # Ambil nama kamera dari request (default: generic)
+        camera_name_custom = data.get('camera_name', f'Camera {str(uuid.uuid4())[:4]}')
+        
         session_id_str = str(uuid.uuid4())
         
         print(f"📷 Request Start Camera. Source: {camera_source}")
@@ -336,7 +379,8 @@ def start_detection():
             "fire_was_detected": False,
             "fire_was_detected": False,
             "frame_counter": 0,
-            "owner": username
+            "owner": username,
+            "camera_name": camera_name_custom  # Simpan nama kamera
         }
 
         print(f"✅ Camera Session Started! ID: {session_id_str}")
@@ -469,6 +513,19 @@ def init_db():
                 username VARCHAR(255) UNIQUE,
                 password VARCHAR(255),
                 plan VARCHAR(50) DEFAULT 'free'
+            )
+        ''')
+
+        # Table Transactions
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                order_id VARCHAR(255) UNIQUE,
+                username VARCHAR(255),
+                amount INT,
+                status VARCHAR(50),
+                snap_token VARCHAR(255),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
@@ -668,6 +725,145 @@ def detect_single_frame():
 
     except Exception as e:
         print(f"Error in /api/detect: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ==========================================
+# PAYMENT GATEWAY (MIDTRANS) - Manual HTTP Request
+# ==========================================
+import requests
+import base64
+import json
+
+# Konfigurasi Midtrans
+midtrans_server_key = os.getenv('MIDTRANS_SERVER_KEY', 'SB-Mid-server-tOqB0d8a4X...') 
+is_production = False  # Sandbox mode untuk testing
+
+# Base URL Midtrans
+midtrans_url = "https://app.midtrans.com/snap/v1/transactions" if is_production else "https://app.sandbox.midtrans.com/snap/v1/transactions"
+
+@app.route('/api/payment/token', methods=['POST'])
+def get_payment_token():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        plan_type = data.get('plan_type') # 'professional'
+        price = data.get('price') # 799000
+
+        if not username or not plan_type:
+            return jsonify({'error': 'Data tidak lengkap'}), 400
+
+        # Buat Order ID Unik
+        order_id = f"ORDER-{int(time.time())}-{username}"
+        
+        # Payload untuk Midtrans Snap API
+        payload = {
+            "transaction_details": {
+                "order_id": order_id,
+                "gross_amount": price
+            },
+            "credit_card":{
+                "secure": True
+            },
+            "customer_details": {
+                "first_name": username,
+                "email": f"{username.lower().replace(' ', '')}@gmail.com", 
+            },
+            "item_details": [{
+                "id": plan_type,
+                "price": price,
+                "quantity": 1,
+                "name": f"FireVision {plan_type.capitalize()} Plan"
+            }]
+        }
+
+        # Auth Header (Basic Auth: ServerKey encoded in Base64 + :)
+        auth_string = midtrans_server_key + ":"
+        auth_header = base64.b64encode(auth_string.encode()).decode()
+        
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth_header}"
+        }
+
+        # Request ke Midtrans API
+        response = requests.post(midtrans_url, json=payload, headers=headers)
+        response_data = response.json()
+
+        if response.status_code != 201:
+            print(f"❌ Midtrans Error: {response_data}")
+            return jsonify({'error': 'Gagal membuat transaksi midtrans'}), 500
+
+        snap_token = response_data['token']
+        # redirect_url = response_data['redirect_url']
+
+        # Simpan Transaksi ke Database
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO transactions (order_id, username, amount, status, snap_token)
+            VALUES (%s, %s, %s, 'pending', %s)
+        ''', (order_id, username, price, snap_token))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'status': 'success',
+            'token': snap_token,
+            'order_id': order_id
+        })
+
+    except Exception as e:
+        print(f"❌ Error Payment Token: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/payment/notification', methods=['POST'])
+def payment_notification():
+    try:
+        notification_body = request.get_json()
+        
+        order_id = notification_body.get('order_id')
+        transaction_status = notification_body.get('transaction_status')
+        fraud_status = notification_body.get('fraud_status')
+
+        print(f"🔔 Payment Notification: {order_id} - {transaction_status}")
+
+        final_status = 'pending'
+        if transaction_status == 'capture':
+            if fraud_status == 'challenge':
+                final_status = 'challenge'
+            else:
+                final_status = 'success'
+        elif transaction_status == 'settlement':
+            final_status = 'success'
+        elif transaction_status == 'cancel' or transaction_status == 'deny' or transaction_status == 'expire':
+            final_status = 'failed'
+        elif transaction_status == 'pending':
+            final_status = 'pending'
+
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("UPDATE transactions SET status = %s WHERE order_id = %s", (final_status, order_id))
+        
+        if final_status == 'success':
+            c.execute("SELECT username FROM transactions WHERE order_id = %s", (order_id,))
+            trx = c.fetchone()
+            if trx:
+                username_trx = trx[0]
+                plan_name = 'professional'
+                c.execute("UPDATE users SET plan = %s WHERE username = %s", (plan_name, username_trx))
+                print(f"🎉 User {username_trx} di-upgrade ke {plan_name}!")
+        
+        conn.commit()
+        conn.close()
+
+        return jsonify({'status': 'ok'})
+
+    except Exception as e:
+        print(f"❌ Error Notification: {e}")
         return jsonify({'error': str(e)}), 500
 
 

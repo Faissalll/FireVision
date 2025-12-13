@@ -3,8 +3,11 @@ import DemoFire from "../components/DemoFire.vue";
 import MultiCameraView from "../components/MultiCameraView.vue";
 import Footer from "../components/Footer.vue";
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router'; // Import Router
 
 import Modal from "../components/Modal.vue";
+
+const router = useRouter(); // Init Router
 
 const pageRef = ref(null);
 const cameraMode = ref('single'); // 'single', 'multi2', 'multi4'
@@ -13,6 +16,15 @@ const cameraMode = ref('single'); // 'single', 'multi2', 'multi4'
 const showModal = ref(false);
 const modalTitle = ref("");
 const modalMessage = ref("");
+const modalButtonText = ref("Mengerti");
+
+const handleModalClose = () => {
+    showModal.value = false;
+    // If it was the premium alert, redirect to pricing
+    if (modalTitle.value === "Fitur Premium") {
+        router.push('/pricing');
+    }
+};
 
 
 const handleModeChange = (mode) => {
@@ -25,6 +37,7 @@ const handleModeChange = (mode) => {
             if (!user.plan || user.plan === 'free') {
                 modalTitle.value = "Fitur Premium";
                 modalMessage.value = "Fitur Multi-Camera (4x) khusus untuk pengguna Premium. Silakan upgrade plan Anda untuk akses penuh!";
+                modalButtonText.value = "Lihat Paket";
                 showModal.value = true;
                 return;
             }
@@ -123,7 +136,8 @@ onMounted(() => {
             :isOpen="showModal" 
             :title="modalTitle" 
             :message="modalMessage" 
-            @close="showModal = false" 
+            :buttonText="modalButtonText"
+            @close="handleModalClose" 
         />
     </div>
 </template>

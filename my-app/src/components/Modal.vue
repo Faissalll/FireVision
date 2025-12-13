@@ -2,7 +2,11 @@
 defineProps({
   isOpen: Boolean,
   title: String,
-  message: String
+  message: String,
+  buttonText: {
+    type: String,
+    default: "Mengerti"
+  }
 });
 
 defineEmits(['close']);
@@ -41,7 +45,7 @@ defineEmits(['close']);
           class="inline-flex justify-center px-6 py-2 text-sm font-semibold text-white bg-[#8b5cf6] hover:bg-[#7c3aed] border border-transparent rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-500 transition-colors shadow-lg shadow-purple-500/20"
           @click="$emit('close')"
         >
-          Mengerti
+          {{ buttonText }}
         </button>
       </div>
     </div>

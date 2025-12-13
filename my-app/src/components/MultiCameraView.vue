@@ -1,5 +1,9 @@
 <script setup>
 import { ref, onUnmounted } from 'vue';
+import alarmSound from "../assets/alarm.mp3";
+
+const alarmAudio = new Audio(alarmSound);
+alarmAudio.loop = true;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
 
@@ -27,11 +31,86 @@ const cameras = computed(() => {
 // Poller ID storage
 const pollers = {};
 
-// LOAD & SAVE CAMERA NAMES
+// --- LOCAL SETTINGS ---
+const volumeAlarm = ref(80);
+const soundType = ref("siren1");
+const enablePopup = ref(true);
+const enableSound = ref(true);
+
+const saveLocalSettings = () => {
+    localStorage.setItem('fv_volume', volumeAlarm.value);
+    localStorage.setItem('fv_soundType', soundType.value);
+    localStorage.setItem('fv_popup', enablePopup.value);
+    localStorage.setItem('fv_sound', enableSound.value);
+    
+    if (alarmAudio) {
+        alarmAudio.volume = volumeAlarm.value / 100;
+        
+        // Apply Sound Type Logic
+        if (soundType.value === 'siren2') alarmAudio.playbackRate = 1.5;
+        else if (soundType.value === 'beep') alarmAudio.playbackRate = 0.5;
+        else alarmAudio.playbackRate = 1.0;
+    }
+    
+    // Notification Feedback
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("✅ Pengaturan Disimpan", {
+            body: `Volume: ${volumeAlarm.value}%, Jenis: ${soundType.value}`,
+            icon: "/favicon.ico",
+            silent: true
+        });
+    } else {
+        alert("Pengaturan Lokal Disimpan!");
+    }
+
+    // Audio Preview
+    if (enableSound.value && alarmAudio) {
+        alarmAudio.currentTime = 0;
+        alarmAudio.play().catch(e => console.log(e));
+        setTimeout(() => {
+             // Stop only if no active alarm
+             const anyFire = allCameras.value.some(cam => cam.isRunning && cam.detections.length > 0);
+             if(!anyFire) {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+            }
+        }, 1500);
+    }
+};
+
+// LOAD & SAVE CAMERA NAMES & SETTINGS
 import { watch, onMounted } from 'vue';
 
-onMounted(() => {
+onMounted(async () => {
+    // Load Local Settings
+    const vol = localStorage.getItem('fv_volume');
+    if (vol) volumeAlarm.value = Number(vol);
+    if(alarmAudio) alarmAudio.volume = volumeAlarm.value / 100;
+    
+    const popup = localStorage.getItem('fv_popup');
+    if (popup) enablePopup.value = (popup === 'true');
+    
+    const snd = localStorage.getItem('fv_sound');
+    if (snd) enableSound.value = (snd === 'true');
+
+    // Load Sound Type
+    const sType = localStorage.getItem('fv_soundType');
+    if (sType) {
+        soundType.value = sType;
+        if (alarmAudio) {
+            if (sType === 'siren2') alarmAudio.playbackRate = 1.5;
+            else if (sType === 'beep') alarmAudio.playbackRate = 0.5;
+            else alarmAudio.playbackRate = 1.0;
+        }
+    }
+
+    // Setup Notification Permission
+    if ("Notification" in window && Notification.permission !== "granted") {
+        await Notification.requestPermission();
+    }
+    
     const userStr = localStorage.getItem("user");
+
     if (userStr) {
         const user = JSON.parse(userStr);
         const username = user.username || "guest";
@@ -71,7 +150,8 @@ const startCamera = async (index) => {
             camera_source: cam.source,
             ip_camera_url: cam.url,
             sensitivity: 70, // default
-            username: username
+            username: username,
+            camera_name: cam.name || `Kamera ${cam.id}`
         };
 
         const response = await fetch(`${API_BASE_URL}/api/start-detection`, {
@@ -136,12 +216,57 @@ const fetchDetections = async (index) => {
     } catch (e) {
         // silent
     }
+    checkAlarmStatus();
 };
 
 const stopAll = () => {
     allCameras.value.forEach((cam, idx) => {
         if (cam.isRunning) stopCamera(idx);
     });
+    // Stop audio
+    if (!alarmAudio.paused) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+    }
+};
+
+// Check if ANY camera has detections to play sound
+// Check if ANY camera has detections to play sound and notify
+const checkAlarmStatus = () => {
+    const anyFireCamera = allCameras.value.find(cam => cam.isRunning && cam.detections.length > 0);
+    
+    if (anyFireCamera) {
+        // Audio
+        if (enableSound.value) {
+            if (alarmAudio.paused) {
+                alarmAudio.volume = volumeAlarm.value / 100;
+                alarmAudio.play().catch(e => console.warn("Audio play blocked", e));
+            }
+        } else {
+             // If sound disabled but playing, stop it
+             if (!alarmAudio.paused) {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+            }
+        }
+        
+        // Browser Notification
+        if (enablePopup.value && "Notification" in window && Notification.permission === "granted") {
+            const now = Date.now();
+            if (!checkAlarmStatus.lastNotify || now - checkAlarmStatus.lastNotify > 5000) {
+                new Notification("🔥 PERINGATAN API!", {
+                    body: `Api terdeteksi di ${anyFireCamera.name || 'Kamera ' + anyFireCamera.id}! Segera periksa!`,
+                    icon: "/favicon.ico"
+                });
+                checkAlarmStatus.lastNotify = now;
+            }
+        }
+    } else {
+        if (!alarmAudio.paused) {
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
+        }
+    }
 };
 
 onUnmounted(() => {
@@ -201,10 +326,128 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
+
+
     </div>
 </template>
 
 <style scoped>
+/* SETTINGS PANEL STYLES */
+.settings-panel-container {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+.settings-panel {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #2d2d48;
+}
+.panel-header h3 {
+    margin: 0 0 10px 0;
+    color: white;
+}
+.setting-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #e5e7eb;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+.setting-value {
+    color: #8b5cf6;
+    margin-left: 8px;
+}
+.custom-select {
+    width: 100%;
+    padding: 10px 14px;
+    background: #1e293b;
+    border: 1px solid #2d3748;
+    color: #fff;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    outline: none;
+    cursor: pointer;
+}
+.slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #1e293b;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    margin-bottom: 20px;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #8b5cf6;
+    cursor: pointer;
+}
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+}
+.toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-label {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #1e293b;
+    transition: 0.3s;
+    border-radius: 34px;
+}
+.toggle-label:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #6b7280;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+.toggle-input:checked + .toggle-label {
+    background: #8b5cf6;
+}
+.toggle-input:checked + .toggle-label:before {
+    transform: translateX(24px);
+    background-color: #fff;
+}
+.save-btn {
+    width: 100%;
+    padding: 14px;
+    background: #1f2937;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+.save-btn:hover {
+    background: #374151;
+}
+
+/* Existing Styles */
 .multi-camera-container {
     padding: 20px;
     background: #0f0f1e;
