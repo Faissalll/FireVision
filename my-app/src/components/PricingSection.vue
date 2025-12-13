@@ -1,4 +1,72 @@
 <script setup>
+import { ref } from 'vue';
+import { auth } from '../store/auth';
+
+const handlePayment = async (plan) => {
+  if (!auth.user || !auth.user.username) {
+    alert("Silakan login terlebih dahulu untuk berlangganan.");
+    window.location.href = '/login';
+    return;
+  }
+
+  if (plan.name === 'Enterprise') {
+    window.location.href = '/contact';
+    return;
+  }
+
+  // Harga hardcode utk contoh (Harusnya dari backend/DB)
+  const priceMap = {
+    'Starter': 299000,
+    'Professional': 799000
+  };
+
+  try {
+    const response = await fetch('http://localhost:5001/api/payment/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: auth.user.username,
+        plan_type: plan.name.toLowerCase(),
+        price: priceMap[plan.name]
+      })
+    });
+
+    const data = await response.json();
+    if (data.token) {
+      // Panggil Snap.js
+      window.snap.pay(data.token, {
+        onSuccess: function(result){
+          alert("Pembayaran Berhasil! Akun Anda akan diupgrade.");
+          // Update local state plan
+          auth.user.plan = plan.name.toLowerCase();
+          localStorage.setItem('user', JSON.stringify(auth.user));
+          
+          console.log(result);
+          window.location.reload();
+        },
+        onPending: function(result){
+          alert("Menunggu pembayaran...");
+          console.log(result);
+        },
+        onError: function(result){
+          alert("Pembayaran gagal!");
+          console.log(result);
+        },
+        onClose: function(){
+          console.log('Customer closed the popup without finishing the payment');
+        }
+      });
+    } else {
+      alert("Gagal mendapatkan token pembayaran: " + (data.error || "Unknown Error"));
+    }
+
+  } catch (error) {
+    console.error("Payment Error:", error);
+    alert("Terjadi kesalahan koneksi ke server pembayaran.");
+  }
+};
+
+
 const plans = [
   {
     name: "Starter",
@@ -30,7 +98,7 @@ const plans = [
     price: "Rp 799rb",
     period: "/bulan",
     isPopular: true,
-    buttonText: "Mulai Uji Coba Gratis",
+    buttonText: "Berlangganan Sekarang", 
     buttonVariant: "solid",
     icon: "layers",
     features: [
@@ -134,7 +202,8 @@ const plans = [
                     plan.buttonVariant === 'solid' 
                       ? 'bg-[#6C4DFF] hover:bg-[#5839EE] text-white shadow-lg shadow-[#6C4DFF]/30' 
                       : 'bg-transparent border border-gray-600 hover:border-gray-400 text-white hover:bg-gray-800'
-                  ]">
+                  ]"
+                  @click="handlePayment(plan)">
             {{ plan.buttonText }}
           </button>
 

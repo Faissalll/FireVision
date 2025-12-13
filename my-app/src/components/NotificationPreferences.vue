@@ -1,5 +1,9 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import alarmSound from "../assets/alarm.mp3";
+
+// Audio Object
+const alarmAudio = new Audio(alarmSound);
 
 // Mock State for Telegram
 const telegramConfig = ref({
@@ -18,20 +22,79 @@ const emailConfig = ref({
     recipientEmail: ''
 });
 
-// Mock State for Sound & Browser
+// Real State for Sound & Browser
 const alertConfig = ref({
     browserPopup: true,
     soundEnabled: true,
     volume: 80,
-    soundType: 'Siren 1'
+    soundType: 'siren1'
 });
 
 // Feedback State
-const telegramStatus = ref(null); // 'success', 'error', or null
+const telegramStatus = ref(null);
 const emailStatus = ref(null);
 
+onMounted(() => {
+    // Load Local Settings
+    const vol = localStorage.getItem('fv_volume');
+    if (vol) alertConfig.value.volume = Number(vol);
+    if(alarmAudio) alarmAudio.volume = alertConfig.value.volume / 100;
+    
+    const popup = localStorage.getItem('fv_popup');
+    if (popup) alertConfig.value.browserPopup = (popup === 'true');
+    
+    const snd = localStorage.getItem('fv_sound');
+    if (snd) alertConfig.value.soundEnabled = (snd === 'true');
+
+    const sType = localStorage.getItem('fv_soundType');
+    if (sType) alertConfig.value.soundType = sType;
+
+    // Request Notification Permission
+    if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
+});
+
+const saveLocalSettings = () => {
+    // Save to LocalStorage
+    localStorage.setItem('fv_volume', alertConfig.value.volume);
+    localStorage.setItem('fv_soundType', alertConfig.value.soundType);
+    localStorage.setItem('fv_popup', alertConfig.value.browserPopup);
+    localStorage.setItem('fv_sound', alertConfig.value.soundEnabled);
+    
+    // Update Audio Instance
+    if (alarmAudio) {
+        alarmAudio.volume = alertConfig.value.volume / 100;
+        
+        // Apply Sound Type Logic (Playback Rate)
+        if (alertConfig.value.soundType === 'siren2') alarmAudio.playbackRate = 1.5;
+        else if (alertConfig.value.soundType === 'beep') alarmAudio.playbackRate = 0.5;
+        else alarmAudio.playbackRate = 1.0;
+    }
+    
+    // Notification Feedback
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("✅ Pengaturan Disimpan", {
+            body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
+            icon: "/favicon.ico",
+            silent: true
+        });
+    } else {
+        alert("Pengaturan Lokal Disimpan!");
+    }
+
+    // Audio Preview
+    if (alertConfig.value.soundEnabled && alarmAudio) {
+        alarmAudio.currentTime = 0;
+        alarmAudio.play().catch(e => console.log("Audio preview error:", e));
+        setTimeout(() => {
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
+        }, 1500);
+    }
+};
+
 const testTelegram = () => {
-    // Simulate API call
     telegramStatus.value = null;
     if(!telegramConfig.value.botToken || !telegramConfig.value.chatId) {
         telegramStatus.value = 'error';
@@ -95,7 +158,7 @@ const testEmail = () => {
                     </button>
                     
                     <p v-if="telegramStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Pesan terkirim! Cek Telegram Anda.</p>
-                    <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">⚠ Gagal. Cek Token dan Chat ID.</p>
+                    <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal. Cek Token dan Chat ID.</p>
                 </div>
             </div>
         </div>
@@ -152,12 +215,12 @@ const testEmail = () => {
                         Kirim Email Uji Coba
                     </button>
                     <p v-if="emailStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Email terkirim! Cek inbox Anda.</p>
-                    <p v-if="emailStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">⚠ Gagal. Cek konfigurasi SMTP/Email.</p>
+                    <p v-if="emailStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal. Cek konfigurasi SMTP/Email.</p>
                 </div>
             </div>
         </div>
 
-        <!-- 3. Sound & Browser -->
+        <!-- 3. Sound & Browser (Functional) -->
         <div class="bg-[#0B0F1A] rounded-2xl p-6 border border-gray-800/50 shadow-lg hover:border-[#6C4DFF]/30 transition-all animate-fade-in-up" style="animation-delay: 0.3s;">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-10 h-10 rounded-full bg-[#6C4DFF]/10 flex items-center justify-center text-[#6C4DFF]">
@@ -177,16 +240,16 @@ const testEmail = () => {
                         <label class="text-xs font-semibold text-gray-500 uppercase">Volume Alarm</label>
                         <span class="text-xs font-mono text-[#6C4DFF]">{{ alertConfig.volume }}%</span>
                     </div>
-                    <input type="range" v-model="alertConfig.volume" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#6C4DFF]" />
+                    <input type="range" v-model.number="alertConfig.volume" min="0" max="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#6C4DFF]" />
                 </div>
 
                  <!-- Sound Type -->
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Jenis Suara</label>
                     <select v-model="alertConfig.soundType" class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#6C4DFF]">
-                        <option>Siren 1 (Standard)</option>
-                        <option>Siren 2 (Urgent)</option>
-                        <option>Beep (Subtle)</option>
+                        <option value="siren1">Siren 1 (Standard)</option>
+                        <option value="siren2">Siren 2 (Urgent)</option>
+                        <option value="beep">Beep (Subtle)</option>
                     </select>
                 </div>
 
@@ -215,7 +278,7 @@ const testEmail = () => {
                 </div>
 
                  <div class="pt-4 border-t border-gray-800">
-                     <button class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                     <button @click="saveLocalSettings" class="w-full py-2 bg-[#6C4DFF] hover:bg-[#5839ff] text-white rounded-lg text-sm font-semibold transition-colors shadow-lg hover:shadow-[#6C4DFF]/25">
                         Simpan Pengaturan Lokal
                     </button>
                 </div>
