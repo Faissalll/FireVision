@@ -7,3 +7,4 @@ torch>=2.0.0
 torchvision>=0.15.0
 mysql-connector-python
 python-dotenv
+PyJWT==2.8.0
