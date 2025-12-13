@@ -11,6 +11,10 @@ import numpy as np
 
 from telegram_notifier import TelegramNotifier
 from sms_notifier import SMSNotifier
+from email_notifier import EmailNotifier
+import jwt
+import datetime
+from functools import wraps
 import mysql.connector
 from dotenv import load_dotenv
 import os
@@ -29,6 +33,7 @@ def load_env_manual(path):
 load_env_manual(env_path)
 print(f"🔑 TELEGRAM_BOT_TOKEN loaded: {os.getenv('TELEGRAM_BOT_TOKEN', 'NOT FOUND')[:20]}...")
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'FireVisionSecretKey2025!Secure')  # Change in production!
 
 CORS(app, resources={
     r"/api/*": {
@@ -37,6 +42,25 @@ CORS(app, resources={
         "allow_headers": ["Content-Type"]
     }
 })
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+        
+        try:
+            # Bearer <token>
+            if "Bearer" in token:
+                token = token.split(" ")[1]
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = data['username']
+        except Exception as e:
+            return jsonify({'message': 'Token is invalid!', 'error': str(e)}), 401
+        
+        return f(current_user, *args, **kwargs)
+    return decorated
 
 sessions = {}
 
@@ -200,67 +224,77 @@ def generate_frames(session_id):
                 })
             session["last_boxes"] = boxes_for_api
 
-            if notifier is not None:
-                if fire_detected and not session["fire_was_detected"]:
-                    session["fire_was_detected"] = True
-                    camera_display_name = session.get("camera_name", f"Camera {session_id[:4]}")
+            # --- PER-USER NOTIFICATION LOGIC ---
+            ns = session.get("notification_settings", {})
+            
+            # Fire Detected Logic
+            if fire_detected and not session.get("fire_was_detected"):
+                session["fire_was_detected"] = True
+                camera_display_name = session.get("camera_name", f"Camera {session_id[:4]}")
+                print(f"🔥 FIRE DETECTED on {camera_display_name}! Processing alerts...")
+
+                # 1. TELEGRAM
+                if ns.get("telegram_enabled") and ns.get("telegram_bot_token") and ns.get("telegram_chat_id"):
                     try:
-                        notifier.send_notification(
+                        tn = TelegramNotifier(ns["telegram_bot_token"], ns["telegram_chat_id"])
+                        tn.send_notification(
                             f"🔥 FireVision Alert ({camera_display_name}) — Api terdeteksi!",
                             frame=processed_frame
                         )
-                        print("📨 Telegram alert sent.")
-                        
-                        if sms_notifier is not None and os.getenv("SMS_PHONE_NUMBER"):
-                            try:
-                                sms_notifier.send_fire_alert(
-                                    phone_number=os.getenv("SMS_PHONE_NUMBER"),
-                                    camera_id=camera_display_name
-                                )
-                                print("📱 SMS/WhatsApp alert sent.")
-
-                                print("📱 SMS/WhatsApp alert sent.")
-                            except Exception as sms_e:
-                                print(f"❌ Gagal kirim SMS: {sms_e}")
-                        
-                        try:
-                            conn = mysql.connector.connect(
-                                host=os.getenv('DB_HOST', 'localhost'),
-                                user=os.getenv('DB_USER', 'root'),
-                                password=os.getenv('DB_PASSWORD', ''),
-                                database=os.getenv('DB_NAME', 'firevision')
-                            )
-                            c = conn.cursor()
-                            
-                            max_conf = 0
-                            for d in detections:
-                                if d['confidence'] > max_conf:
-                                    max_conf = d['confidence']
-                            
-                            c.execute('''
-                                INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            ''', (
-                                session_id,
-                                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                f"Camera {session_id[:4]}", 
-                                "Zone A", 
-                                int(max_conf * 100),
-                                "Baru",
-                                ""
-                            ))
-                            conn.commit()
-                            conn.close()
-                            print("💾 Alarm stored to DB.")
-                        except Exception as e:
-                            print(f"❌ Database error: {e}")
-                            
+                        print(f"📨 Telegram sent to user {session.get('owner')}")
                     except Exception as e:
-                        print(f"❌ Gagal kirim Telegram: {e}")
+                        print(f"❌ Telegram Error: {e}")
 
+                # 2. EMAIL
+                if ns.get("email_enabled") and ns.get("email_recipient"):
+                    try:
+                        en = EmailNotifier(
+                            ns.get("email_smtp_host"), ns.get("email_smtp_port"),
+                            ns.get("email_sender"), ns.get("email_password"),
+                            ns.get("email_recipient")
+                        )
+                        en.send_email(
+                            f"FIRE ALERT: {camera_display_name}",
+                            f"Peringatan Kebakaran!\n\nKamera: {camera_display_name}\nWaktu: {datetime.now()}\n\nHarap segera diperiksa."
+                        )
+                        print(f"📧 Email sent to user {session.get('owner')}")
+                    except Exception as e:
+                         print(f"❌ Email Error: {e}")
 
-                elif not fire_detected and session["fire_was_detected"]:
-                    session["fire_was_detected"] = False
+                # 3. SMS (Keep existing global fallbacks if desired, or remove. Keeping for safety)
+                if sms_notifier is not None and os.getenv("SMS_PHONE_NUMBER"):
+                     try:
+                        sms_notifier.send_fire_alert(os.getenv("SMS_PHONE_NUMBER"), camera_display_name)
+                     except: pass
+                
+                # 4. DATABASE LOG
+                try:
+                    conn = mysql.connector.connect(
+                        host=os.getenv('DB_HOST', 'localhost'),
+                        user=os.getenv('DB_USER', 'root'),
+                        password=os.getenv('DB_PASSWORD', ''),
+                        database=os.getenv('DB_NAME', 'firevision')
+                    )
+                    c = conn.cursor()
+                    max_conf = 0
+                    for d in detections:
+                        if d['confidence'] > max_conf: max_conf = d['confidence']
+                    
+                    c.execute('''
+                        INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ''', (
+                        session_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        camera_display_name, "Zone A", int(max_conf * 100), "Baru", ""
+                    ))
+                    conn.commit()
+                    conn.close()
+                    print("💾 Alarm stored to DB.")
+                except Exception as e:
+                    print(f"❌ DB Log Error: {e}")
+
+            elif not fire_detected and session.get("fire_was_detected"):
+                session["fire_was_detected"] = False
 
             ret, buffer = cv2.imencode('.jpg', processed_frame)
             if not ret:
@@ -282,7 +316,8 @@ def index():
 
 
 @app.route('/api/start-detection', methods=['POST'])
-def start_detection():
+@token_required
+def start_detection(current_user):
     global model, sessions
     
     try:
@@ -293,7 +328,7 @@ def start_detection():
         
         data = request.get_json() or {}
 
-        username = data.get('username')
+        username = current_user # Secure
         if not username:
              return jsonify({'error': 'Username required'}), 400
 
@@ -322,6 +357,20 @@ def start_detection():
             return jsonify({
                 'error': f'Limit Tercapai! Pengguna Free hanya bisa menggunakan {MAX_FREE_CAMERAS} kamera. Upgrade ke Premium untuk akses unlimited.'
             }), 403
+
+        # Fetch Notification Settings
+        notif_settings = {}
+        try:
+            conn = get_db_connection()
+            c = conn.cursor(dictionary=True)
+            c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+            row = c.fetchone()
+            conn.close()
+            if row:
+                notif_settings = row
+                print(f"✅ Notification settings loaded for {username}")
+        except Exception as e:
+            print(f"❌ Error fetching notification settings: {e}")
 
         camera_source = str(data.get('camera_source', 'WEBCAM')).upper()
         ip_camera_url = data.get('ip_camera_url') 
@@ -376,7 +425,7 @@ def start_detection():
             "last_boxes": [],
             "last_frame_w": 0,
             "last_frame_h": 0,
-            "fire_was_detected": False,
+            "notification_settings": notif_settings,
             "fire_was_detected": False,
             "frame_counter": 0,
             "owner": username,
@@ -395,8 +444,92 @@ def start_detection():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/notification-settings', methods=['GET', 'POST'])
+@token_required
+def notification_settings_api(current_user):
+    data = request.get_json(silent=True) or {}
+    username = current_user # Use authenticated user, ignore request body username for security
+
+    if not username:
+        return jsonify({'error': 'Username required'}), 400
+
+    conn = get_db_connection()
+    c = conn.cursor(dictionary=True)
+
+    if request.method == 'GET':
+        try:
+            c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+            settings = c.fetchone()
+            if not settings:
+                # Return defaults
+                settings = {
+                    "username": username,
+                    "telegram_enabled": False, "email_enabled": False,
+                    "telegram_bot_token": "", "telegram_chat_id": "",
+                    "email_smtp_host": "smtp.gmail.com", "email_smtp_port": 587,
+                    "email_sender": "", "email_recipient": ""
+                }
+            return jsonify(settings)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    elif request.method == 'POST':
+        try:
+            # UPSERT
+            sql = """
+            INSERT INTO notification_settings (
+                username, telegram_enabled, telegram_bot_token, telegram_chat_id,
+                email_enabled, email_smtp_host, email_smtp_port, email_sender, email_password, email_recipient
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                telegram_enabled=VALUES(telegram_enabled),
+                telegram_bot_token=VALUES(telegram_bot_token),
+                telegram_chat_id=VALUES(telegram_chat_id),
+                email_enabled=VALUES(email_enabled),
+                email_smtp_host=VALUES(email_smtp_host),
+                email_smtp_port=VALUES(email_smtp_port),
+                email_sender=VALUES(email_sender),
+                email_password=VALUES(email_password),
+                email_recipient=VALUES(email_recipient)
+            """
+            vals = (
+                username,
+                data.get('telegram_enabled', False),
+                data.get('telegram_bot_token', ''),
+                data.get('telegram_chat_id', ''),
+                data.get('email_enabled', False),
+                data.get('email_smtp_host', 'smtp.gmail.com'),
+                data.get('email_smtp_port', 587),
+                data.get('email_sender', ''),
+                data.get('email_password', ''), # Be careful with plaintext passwords
+                data.get('email_recipient', '')
+            )
+            c.execute(sql, vals)
+            conn.commit()
+            
+            # TODO: Update active sessions for this user?
+            # For simplicity, we just save. Next connection picks it up. 
+            # Or iterate sessions:
+            global sessions
+            for sid, s in sessions.items():
+                if s.get('owner') == username:
+                    c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+                    s['notification_settings'] = c.fetchone()
+                    print(f"🔄 Updated live settings for session {sid}")
+
+            return jsonify({'status': 'saved'})
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+
 @app.route('/api/update-settings', methods=['POST'])
-def update_settings():
+@token_required
+def update_settings(current_user):
     global sessions
     data = request.get_json() or {}
     
@@ -421,7 +554,8 @@ def update_settings():
 
 
 @app.route('/api/stop-detection', methods=['POST'])
-def stop_detection():
+@token_required
+def stop_detection(current_user):
     global sessions
     data = request.get_json() or {}
     target_session_id = data.get('session_id')
@@ -473,6 +607,8 @@ def get_db_connection():
         password=os.getenv('DB_PASSWORD', ''),
         database=os.getenv('DB_NAME', 'firevision')
     )
+
+
 
 def init_db():
     conn = None
@@ -530,6 +666,26 @@ def init_db():
         ''')
 
         # Migration: Add plan column if not exists (for existing tables)
+        try:
+            # Table Notification Settings (NEW)
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS notification_settings (
+                    username VARCHAR(255) PRIMARY KEY,
+                    telegram_enabled BOOLEAN DEFAULT FALSE,
+                    telegram_bot_token TEXT,
+                    telegram_chat_id TEXT,
+                    email_enabled BOOLEAN DEFAULT FALSE,
+                    email_smtp_host VARCHAR(255),
+                    email_smtp_port INT DEFAULT 587,
+                    email_sender VARCHAR(255),
+                    email_password TEXT,
+                    email_recipient TEXT,
+                    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+                )
+            """)
+        except Exception as e_notif:
+            print(f"⚠️ Error creating notification_settings table: {e_notif}")
+
         try:
             c.execute("SELECT plan FROM users LIMIT 1")
             c.fetchall() 
@@ -592,11 +748,19 @@ def login():
         conn.close()
 
         if user and check_password_hash(user['password'], password):
+            # Generate Token
+            token = jwt.encode({
+                'username': username,
+                'plan': user.get('plan', 'free'),
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            }, app.config['SECRET_KEY'], algorithm="HS256")
+
             return jsonify({
                 'status': 'success', 
                 'message': 'Login berhasil', 
                 'username': username,
-                'plan': user.get('plan', 'free') 
+                'plan': user.get('plan', 'free'),
+                'token': token
             })
         else:
             return jsonify({'error': 'Username atau password salah'}), 401
