@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import os
 from .database import init_db
 from .routes.auth_routes import auth_bp
-from .routes.stream_routes import stream_bp
 from .routes.user_routes import user_bp
 
 def create_app():
@@ -42,10 +41,9 @@ def create_app():
 
     @app.route('/api/health', methods=['GET'])
     def health_check():
-        from .services.detector import sessions
         return jsonify({
             'status': 'running',
-            'active_sessions': len(sessions)
+            'service': 'backend-railway'
         })
         
     return app
