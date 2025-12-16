@@ -5,9 +5,9 @@ import math
 import uuid
 from datetime import datetime
 from ultralytics import YOLO
-import mysql.connector
+# import mysql.connector (Removed for Microservice)
 from .notifier import TelegramNotifier, EmailNotifier, SMSNotifier
-from ..database import get_db_connection
+# from ..database import get_db_connection (Removed for Microservice)
 
 # Global State
 model = None
