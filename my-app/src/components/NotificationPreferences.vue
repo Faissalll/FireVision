@@ -1,28 +1,31 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import alarmSound from "../assets/alarm.mp3";
+import { auth } from '../store/auth';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
 
 // Audio Object
 const alarmAudio = new Audio(alarmSound);
 
-// Mock State for Telegram
+// State for Telegram
 const telegramConfig = ref({
     enabled: false,
     botToken: '',
     chatId: ''
 });
 
-// Mock State for Email
+// State for Email
 const emailConfig = ref({
     enabled: false,
-    smtpHost: '',
+    smtpHost: 'smtp.gmail.com',
     smtpPort: '587',
     senderEmail: '',
     password: '',
     recipientEmail: ''
 });
 
-// Real State for Sound & Browser
+// State for Sound & Browser (Local Only)
 const alertConfig = ref({
     browserPopup: true,
     soundEnabled: true,
@@ -33,9 +36,50 @@ const alertConfig = ref({
 // Feedback State
 const telegramStatus = ref(null);
 const emailStatus = ref(null);
+const isLoading = ref(false);
 
-onMounted(() => {
-    // Load Local Settings
+// Auto-detect State
+const showGuide = ref(false);
+const checkingId = ref(false);
+const idCheckMsg = ref("");
+const idCheckSuccess = ref(false);
+
+const checkChatId = async () => {
+    if (!telegramConfig.value.botToken) return;
+    
+    checkingId.value = true;
+    idCheckMsg.value = "";
+    idCheckSuccess.value = false;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/telegram/get-chat-id`, {
+             method: 'POST',
+             headers: { 
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${auth.user.token}`
+             },
+             body: JSON.stringify({ token: telegramConfig.value.botToken })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.chat_id) {
+            telegramConfig.value.chatId = data.chat_id;
+            idCheckSuccess.value = true;
+            idCheckMsg.value = "Chat ID ditemukan!";
+        } else {
+            idCheckSuccess.value = false;
+            idCheckMsg.value = data.error || "Gagal. Pastikan sudah chat bot Anda.";
+        }
+    } catch (e) {
+        idCheckSuccess.value = false;
+        idCheckMsg.value = "Koneksi error.";
+    } finally {
+        checkingId.value = false;
+    }
+};
+
+onMounted(async () => {
+    // 1. Load Local Sound Settings
     const vol = localStorage.getItem('fv_volume');
     if (vol) alertConfig.value.volume = Number(vol);
     if(alarmAudio) alarmAudio.volume = alertConfig.value.volume / 100;
@@ -49,11 +93,91 @@ onMounted(() => {
     const sType = localStorage.getItem('fv_soundType');
     if (sType) alertConfig.value.soundType = sType;
 
+    // 2. Load Backend Notification Settings
+    if (auth.user && auth.user.username) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/notification-settings?username=${auth.user.username}`, {
+                 headers: { 
+                    'Authorization': `Bearer ${auth.user.token || ''}`
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data) {
+                    telegramConfig.value = {
+                        enabled: Boolean(data.telegram_enabled),
+                        botToken: data.telegram_bot_token || '',
+                        chatId: data.telegram_chat_id || ''
+                    };
+                    emailConfig.value = {
+                        enabled: Boolean(data.email_enabled),
+                        smtpHost: data.email_smtp_host || 'smtp.gmail.com',
+                        smtpPort: String(data.email_smtp_port || '587'),
+                        senderEmail: data.email_sender || '',
+                        password: data.email_password || '',
+                        recipientEmail: data.email_recipient || ''
+                    };
+                }
+            }
+        } catch (e) {
+            console.error("Gagal memuat setting backend:", e);
+        }
+    }
+
     // Request Notification Permission
     if ("Notification" in window && Notification.permission !== "granted") {
         Notification.requestPermission();
     }
 });
+
+const saveBackendSettings = async (type) => {
+    if (!auth.user || !auth.user.username) {
+        alert("Harap login terlebih dahulu.");
+        return;
+    }
+    
+    isLoading.value = true;
+    if (type === 'telegram') telegramStatus.value = null;
+    if (type === 'email') emailStatus.value = null;
+
+    const payload = {
+        username: auth.user.username,
+        telegram_enabled: telegramConfig.value.enabled,
+        telegram_bot_token: telegramConfig.value.botToken,
+        telegram_chat_id: telegramConfig.value.chatId,
+        email_enabled: emailConfig.value.enabled,
+        email_smtp_host: emailConfig.value.smtpHost,
+        email_smtp_port: parseInt(emailConfig.value.smtpPort),
+        email_sender: emailConfig.value.senderEmail,
+        email_password: emailConfig.value.password,
+        email_recipient: emailConfig.value.recipientEmail
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/notification-settings`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${auth.user.token}`
+            },
+            body: JSON.stringify(payload)
+        });
+        const res = await response.json();
+        
+        if (res.status === 'saved') {
+            if (type === 'telegram') telegramStatus.value = 'success';
+            if (type === 'email') emailStatus.value = 'success';
+        } else {
+            throw new Error(res.error || 'Gagal menyimpan');
+        }
+    } catch (e) {
+        console.error(e);
+        if (type === 'telegram') telegramStatus.value = 'error';
+        if (type === 'email') emailStatus.value = 'error';
+    } finally {
+        isLoading.value = false;
+    }
+};
 
 const saveLocalSettings = () => {
     // Save to LocalStorage
@@ -66,13 +190,11 @@ const saveLocalSettings = () => {
     if (alarmAudio) {
         alarmAudio.volume = alertConfig.value.volume / 100;
         
-        // Apply Sound Type Logic (Playback Rate)
         if (alertConfig.value.soundType === 'siren2') alarmAudio.playbackRate = 1.5;
         else if (alertConfig.value.soundType === 'beep') alarmAudio.playbackRate = 0.5;
         else alarmAudio.playbackRate = 1.0;
     }
     
-    // Notification Feedback
     if ("Notification" in window && Notification.permission === "granted") {
         new Notification("✅ Pengaturan Disimpan", {
             body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
@@ -83,7 +205,6 @@ const saveLocalSettings = () => {
         alert("Pengaturan Lokal Disimpan!");
     }
 
-    // Audio Preview
     if (alertConfig.value.soundEnabled && alarmAudio) {
         alarmAudio.currentTime = 0;
         alarmAudio.play().catch(e => console.log("Audio preview error:", e));
@@ -92,28 +213,6 @@ const saveLocalSettings = () => {
             alarmAudio.currentTime = 0;
         }, 1500);
     }
-};
-
-const testTelegram = () => {
-    telegramStatus.value = null;
-    if(!telegramConfig.value.botToken || !telegramConfig.value.chatId) {
-        telegramStatus.value = 'error';
-        return;
-    }
-    setTimeout(() => {
-        telegramStatus.value = 'success';
-    }, 1000);
-};
-
-const testEmail = () => {
-    emailStatus.value = null;
-    if(!emailConfig.value.recipientEmail) {
-        emailStatus.value = 'error';
-        return;
-    }
-    setTimeout(() => {
-        emailStatus.value = 'success';
-    }, 1500);
 };
 </script>
 
@@ -136,11 +235,32 @@ const testEmail = () => {
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Bot Token</label>
-                    <input v-model="telegramConfig.botToken" type="text" class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#2AABEE] transition-colors" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
+                    <div class="flex gap-2">
+                        <input v-model="telegramConfig.botToken" type="text" class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#2AABEE] transition-colors" placeholder="123456:ABC..." />
+                        <button @click="showGuide = !showGuide" class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold transition-colors" title="Cara mendapatkan token">
+                           ?
+                        </button>
+                    </div>
+                    
+                     <!-- Simple Guide -->
+                    <div v-if="showGuide" class="mt-2 p-3 bg-[#151926] border border-gray-700 rounded-lg text-xs text-gray-400 leading-relaxed">
+                        <ol class="list-decimal pl-4 space-y-1">
+                            <li>Chat <b>@BotFather</b> di Telegram & kirim <code>/newbot</code>.</li>
+                            <li>Copy <b>Token</b> yang diberikan ke kolom di atas.</li>
+                            <li>Chat bot baru Anda, ketik "Halo".</li>
+                            <li>Klik tombol <b>Cek ID</b> di bawah.</li>
+                        </ol>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Chat ID</label>
-                    <input v-model="telegramConfig.chatId" type="text" class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#2AABEE] transition-colors" placeholder="-100123456789" />
+                    <div class="flex gap-2">
+                        <input v-model="telegramConfig.chatId" type="text" class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#2AABEE] transition-colors" placeholder="-100..." />
+                        <button @click="checkChatId" :disabled="checkingId || !telegramConfig.botToken" class="whitespace-nowrap px-4 py-2 bg-[#2AABEE]/10 hover:bg-[#2AABEE]/20 text-[#2AABEE] rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
+                            {{ checkingId ? '...' : 'Cek ID' }}
+                        </button>
+                    </div>
+                    <p v-if="idCheckMsg" :class="idCheckSuccess ? 'text-green-500' : 'text-red-500'" class="text-xs mt-1">{{ idCheckMsg }}</p>
                 </div>
 
                 <div class="flex items-center justify-between py-2">
@@ -152,13 +272,14 @@ const testEmail = () => {
                 </div>
 
                 <div class="pt-4 border-t border-gray-800">
-                    <button @click="testTelegram" class="w-full py-2 bg-[#2AABEE]/10 hover:bg-[#2AABEE]/20 text-[#2AABEE] rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                        Kirim Pesan Uji Coba
+                    <button @click="saveBackendSettings('telegram')" :disabled="isLoading" class="w-full py-2 bg-[#2AABEE]/10 hover:bg-[#2AABEE]/20 text-[#2AABEE] rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                        <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span v-if="isLoading">Menyimpan...</span>
+                        <span v-else>Simpan Konfigurasi</span>
                     </button>
                     
-                    <p v-if="telegramStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Pesan terkirim! Cek Telegram Anda.</p>
-                    <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal. Cek Token dan Chat ID.</p>
+                    <p v-if="telegramStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Data disimpan & terhubung ke Backend!</p>
+                    <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal menyimpan. Cek koneksi.</p>
                 </div>
             </div>
         </div>
@@ -210,17 +331,18 @@ const testEmail = () => {
                 </div>
 
                 <div class="pt-4 border-t border-gray-800">
-                     <button @click="testEmail" class="w-full py-2 bg-[#ea4335]/10 hover:bg-[#ea4335]/20 text-[#ea4335] rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                        Kirim Email Uji Coba
+                     <button @click="saveBackendSettings('email')" :disabled="isLoading" class="w-full py-2 bg-[#ea4335]/10 hover:bg-[#ea4335]/20 text-[#ea4335] rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                        <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span v-if="isLoading">Menyimpan...</span>
+                        <span v-else>Simpan Konfigurasi</span>
                     </button>
-                    <p v-if="emailStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Email terkirim! Cek inbox Anda.</p>
-                    <p v-if="emailStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal. Cek konfigurasi SMTP/Email.</p>
+                    <p v-if="emailStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Data disimpan & terhubung ke Backend!</p>
+                    <p v-if="emailStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal menyimpan. Cek konfigurasi.</p>
                 </div>
             </div>
         </div>
 
-        <!-- 3. Sound & Browser (Functional) -->
+        <!-- 3. Sound & Browser -->
         <div class="bg-[#0B0F1A] rounded-2xl p-6 border border-gray-800/50 shadow-lg hover:border-[#6C4DFF]/30 transition-all animate-fade-in-up" style="animation-delay: 0.3s;">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-10 h-10 rounded-full bg-[#6C4DFF]/10 flex items-center justify-center text-[#6C4DFF]">

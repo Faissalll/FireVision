@@ -10,6 +10,7 @@ export default defineConfig({
 
     // Karena kita ingin agar aset selalu dimuat dari akar (root) server dev,
     // dan ini mencegah masalah aset hilang saat Mode Hash digunakan.
+    // Base must be '/' for Vercel root deployment
     base: "/",
 
     plugins: [vue(), tailwindcss()],

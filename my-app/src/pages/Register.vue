@@ -6,6 +6,7 @@ import Footer from "../components/Footer.vue";
 
 const router = useRouter();
 const username = ref("");
+const email = ref("");
 const password = ref("");
 const confirmPassword = ref("");
 const errorMessage = ref("");
@@ -24,11 +25,12 @@ const handleRegister = async () => {
     }
 
     try {
-        const response = await fetch("http://localhost:5001/api/register", {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 username: username.value,
+                email: email.value,
                 password: password.value,
             }),
         });
@@ -69,6 +71,14 @@ const handleRegister = async () => {
                         <input v-model="username" type="text" required
                             class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#6C4DFF] focus:ring-1 focus:ring-[#6C4DFF] transition-all"
                             placeholder="Pilih username" />
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-gray-400 text-sm font-medium mb-2">Email</label>
+                        <input v-model="email" type="email" required
+                            class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#6C4DFF] focus:ring-1 focus:ring-[#6C4DFF] transition-all"
+                            placeholder="nama@email.com" />
                     </div>
 
                     <!-- Password -->

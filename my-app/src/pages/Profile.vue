@@ -7,46 +7,110 @@ import Footer from "../components/Footer.vue";
 const router = useRouter();
 const user = ref(null);
 const isEditing = ref(false);
+const isLoading = ref(true);
 const editForm = ref({
   username: ""
 });
 
+const getAuthHeader = () => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed.token) return `Bearer ${parsed.token}`;
+    }
+    return null;
+};
+
+const fetchProfile = async () => {
+    const token = getAuthHeader();
+    if (!token) {
+        handleLogout();
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/profile', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            user.value = data;
+            
+            // Update local storage to keep in sync (optional but good for consistency)
+            const stored = JSON.parse(localStorage.getItem("user") || '{}');
+            stored.username = data.username;
+            stored.plan = data.plan;
+            localStorage.setItem("user", JSON.stringify(stored));
+            
+            editForm.value.username = data.username;
+        } else {
+            if (res.status === 401) handleLogout();
+            else console.error("Failed to fetch profile");
+        }
+    } catch (e) {
+        console.error("Error fetching profile:", e);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
 onMounted(() => {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    user.value = JSON.parse(storedUser);
-    editForm.value.username = user.value.username;
-  } else {
-    router.push("/login"); // Redirect if not logged in
-  }
+  fetchProfile();
 });
 
 const toggleEdit = () => {
   isEditing.value = !isEditing.value;
-  if (isEditing.value) {
+  if (isEditing.value && user.value) {
     editForm.value.username = user.value.username;
   }
 };
 
-const saveProfile = () => {
+const saveProfile = async () => {
   if (!editForm.value.username.trim()) {
     alert("Username tidak boleh kosong");
     return;
   }
 
-  // Update local object
-  user.value.username = editForm.value.username;
-  
-  // Update localStorage
-  localStorage.setItem("user", JSON.stringify(user.value));
-  
-  // Exit edit mode
-  isEditing.value = false;
-  alert("Profil berhasil diperbarui!");
-  
-  // Optional: Force reload to update Navbar if not using reactive store globally yet
-  // window.location.reload(); 
-  // Better: emits or simple alert is enough for now as requested "Mock/Simple"
+  const token = getAuthHeader();
+  if (!token) return;
+
+  try {
+      const res = await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': token 
+          },
+          body: JSON.stringify({ username: editForm.value.username })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+          alert(data.message || "Profil berhasil diperbarui!");
+          
+          if (data.username !== user.value.username) {
+               // Username changed, force logout for security/token refresh
+               alert("Username berubah. Silakan login kembali.");
+               handleLogout();
+          } else {
+               // Just update local view
+               user.value.username = data.username;
+               isEditing.value = false;
+               
+               // Update local storage
+               const stored = JSON.parse(localStorage.getItem("user") || '{}');
+               stored.username = data.username;
+               localStorage.setItem("user", JSON.stringify(stored));
+          }
+      } else {
+          alert(data.error || "Gagal memperbarui profil");
+      }
+  } catch (e) {
+      alert("Terjadi kesalahan koneksi.");
+      console.error(e);
+  }
 };
 
 const handleLogout = () => {
@@ -64,12 +128,16 @@ const handleLogout = () => {
       <div class="max-w-4xl mx-auto">
         <h1 class="text-3xl font-bold mb-8">Profil Saya</h1>
 
-        <div v-if="user" class="bg-[#0B0F1A] border border-gray-800 rounded-2xl p-8 shadow-xl flex flex-col md:flex-row gap-8 items-start">
+        <div v-if="isLoading" class="flex justify-center py-20">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6C4DFF]"></div>
+        </div>
+
+        <div v-else-if="user" class="bg-[#0B0F1A] border border-gray-800 rounded-2xl p-8 shadow-xl flex flex-col md:flex-row gap-8 items-start">
           
           <!-- Avatar Section -->
           <div class="flex-shrink-0">
             <div class="w-32 h-32 bg-[#1A1625] rounded-full flex items-center justify-center border-2 border-[#6C4DFF]">
-              <span class="text-5xl font-bold text-[#6C4DFF]">{{ user.username.charAt(0).toUpperCase() }}</span>
+              <span class="text-5xl font-bold text-[#6C4DFF]">{{ user.username ? user.username.charAt(0).toUpperCase() : '?' }}</span>
             </div>
           </div>
 
@@ -89,7 +157,7 @@ const handleLogout = () => {
             <div>
               <label class="block text-sm text-gray-500 mb-1">Paket Saat Ini</label>
               <div class="inline-flex items-center px-3 py-1 rounded-full bg-[#6C4DFF]/10 text-[#6C4DFF] border border-[#6C4DFF]/20 text-sm font-medium">
-                Starter (Free Trial)
+                {{ user.plan ? user.plan.toUpperCase() : 'FREE' }}
               </div>
             </div>
 
@@ -130,6 +198,10 @@ const handleLogout = () => {
             </button>
           </div>
 
+        </div>
+        
+        <div v-else class="text-center py-10 text-gray-400">
+            Gagal memuat profil. <button @click="fetchProfile" class="text-[#6C4DFF] hover:underline">Coba lagi</button>
         </div>
 
         <!-- Recent Activity Placeholder -->

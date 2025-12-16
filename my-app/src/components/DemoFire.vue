@@ -4,7 +4,6 @@ import FireDemoImage from "../assets/FireDemo.jpg";
 import alarmSound from "../assets/alarm.mp3";
 import { auth } from "../store/auth";
 
-const detectionSensitivity = ref(70);
 const detectionSmoothing = ref(false);
 const noiseReductionLevel = ref(false);
 const playbackControls = ref(false);
@@ -12,27 +11,17 @@ const sectionRef = ref(null);
 
 const processingSpeed = ref("30fps");
 
-// 🔹 Watcher untuk update setting secara realtime
-watch(detectionSensitivity, async (newVal) => {
-    if (isDetecting.value) {
-        try {
-            await fetch(`${API_BASE_URL}/api/update-settings`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sensitivity: getSafeSensitivity() }),
-            });
-        } catch (err) {
-            console.error("Failed to update sensitivity:", err);
-        }
-    }
-});
+// 🔹 Watcher untuk update setting secara realtime (Sensitivity removed)
 
 watch([detectionSmoothing, noiseReductionLevel], async () => {
     if (isDetecting.value) {
         try {
             await fetch(`${API_BASE_URL}/api/update-settings`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${auth.user.token}` 
+                },
                 body: JSON.stringify({
                     smoothing: detectionSmoothing.value,
                     noiseReduction: noiseReductionLevel.value
@@ -174,11 +163,7 @@ const saveLocalSettings = () => {
 };
 // ------------------------------------
 
-const getSafeSensitivity = () => {
-    const raw = Number(detectionSensitivity.value);
-    if (Number.isNaN(raw)) return 70;
-    return Math.min(Math.max(raw, 0), 99);
-};
+const getSafeSensitivity = () => 70;
 
 function boxToStyle(box, frameSize = null) {
     let left, top, width, height;
@@ -334,10 +319,8 @@ const playDemo = async () => {
         isStreamReady.value = false;
         stopProbeStreamReady();
 
-        const safeSensitivity = getSafeSensitivity();
-        const wasClamped =
-            Number(detectionSensitivity.value) === 100 &&
-            safeSensitivity === 99;
+        // Sensitivity removed
+        const wasClamped = false;
 
         const healthCheck = await fetch(`${API_BASE_URL}/api/health`, {
             method: "GET",
@@ -347,10 +330,13 @@ const playDemo = async () => {
 
         const response = await fetch(`${API_BASE_URL}/api/start-detection`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${auth.user.token}`
+            },
             body: JSON.stringify({
                 username: auth.user.username,
-                sensitivity: safeSensitivity,
+                // sensitivity removed
                 smoothing: detectionSmoothing.value,
                 noiseReduction: noiseReductionLevel.value,
                 playbackControls: playbackControls.value,
@@ -381,10 +367,7 @@ const playDemo = async () => {
             startProbeStreamReady();
         }
 
-        if (wasClamped) {
-            errorMessage.value =
-                "Sensitivity 100 dibatasi ke 99 untuk kestabilan deteksi.";
-        }
+        // wasClamped logic removed
 
         startPollingDetections(data.session_id);
     } catch (error) {
@@ -421,7 +404,10 @@ const stopDetection = async () => {
         if (sessionId.value) {
             await fetch(`${API_BASE_URL}/api/stop-detection`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${auth.user.token}`
+                },
                 body: JSON.stringify({ session_id: sessionId.value }),
             });
         }
@@ -520,10 +506,8 @@ const playDemoStable = async () => {
         stopProbeStreamReady();
         stopPollingDetections();
 
-        const safeSensitivity = getSafeSensitivity();
-        const wasClamped =
-            Number(detectionSensitivity.value) === 100 &&
-            safeSensitivity === 99;
+        // const wasClamped = ... (removed)
+        const wasClamped = false;
 
         const healthCheck = await fetch(`${API_BASE_URL}/api/health`, {
             method: "GET",
@@ -533,10 +517,13 @@ const playDemoStable = async () => {
 
         const response = await fetch(`${API_BASE_URL}/api/start-detection`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${auth.user.token}`
+            },
             body: JSON.stringify({
                 username: auth.user.username,
-                sensitivity: safeSensitivity,
+                // sensitivity removed, backend defaults to 70
                 smoothing: detectionSmoothing.value,
                 noiseReduction: noiseReductionLevel.value,
                 playbackControls: playbackControls.value,
@@ -598,7 +585,10 @@ const stopDetectionStable = async () => {
 
         await fetch(`${API_BASE_URL}/api/stop-detection`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${auth.user.token}`
+            },
         }).catch(() => {});
         
        // Stop audio
@@ -868,26 +858,7 @@ onMounted(async () => {
                             }}</span>
                         </button>
 
-                        <div class="setting-group">
-                            <label class="setting-label">
-                                Sensitivitas Deteksi:
-                                <span class="setting-value"
-                                    >{{ detectionSensitivity }}%</span
-                                >
-                            </label>
-                            <input
-                                type="range"
-                                v-model.number="detectionSensitivity"
-                                min="0"
-                                max="100"
-                                step="1"
-                                class="slider"
-                            />
-                            <p class="setting-help">
-                                Sensitivitas lebih tinggi mendeteksi api lebih kecil tetapi mungkin
-                                meningkatkan positif palsu
-                            </p>
-                        </div>
+                        <!-- Sensitivity Slider Removed -->
 
                         <div class="setting-group">
                             <div class="setting-row">

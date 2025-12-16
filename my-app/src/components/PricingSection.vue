@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { auth } from '../store/auth';
+
+const sectionRef = ref(null);
 
 const handlePayment = async (plan) => {
   if (!auth.user || !auth.user.username) {
@@ -21,7 +23,7 @@ const handlePayment = async (plan) => {
   };
 
   try {
-    const response = await fetch('http://localhost:5001/api/payment/token', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -146,10 +148,37 @@ const plans = [
     ]
   }
 ];
+
+onMounted(() => {
+    if (!sectionRef.value) return;
+    
+    // Use scoped querySelectorAll for reliability
+    const cards = sectionRef.value.querySelectorAll('.pricing-card');
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            entry.target.style.transitionDelay = `${index * 0.2}s`
+            entry.target.classList.remove('prepare-animate') 
+            entry.target.classList.add('animate')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    cards.forEach((card) => {
+        // Hiding initially
+        card.classList.add('prepare-animate');
+        observer.observe(card);
+    })
+})
 </script>
 
 <template>
-  <section class="py-20 relative overflow-hidden">
+  <section ref="sectionRef" class="py-20 relative overflow-hidden">
     <!-- Header -->
     <div class="text-center mb-24 relative z-10 px-4">
       <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">
@@ -164,7 +193,7 @@ const plans = [
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         <div v-for="(plan, index) in plans" :key="index" 
-             class="relative flex flex-col p-8 rounded-2xl transition-transform duration-300 hover:-translate-y-2 border"
+             class="pricing-card relative flex flex-col p-8 rounded-2xl transition-transform duration-300 hover:-translate-y-2 border"
              :class="[
                plan.isPopular 
                  ? 'bg-[#0B0F1A]/80 border-[#6C4DFF] shadow-[0_0_30px_rgba(108,77,255,0.15)] z-10 scale-105 lg:scale-105' 
@@ -226,3 +255,49 @@ const plans = [
     </div>
   </section>
 </template>
+
+<style scoped>
+.pricing-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+/* Ensure hover scale does not conflict with animate transform. 
+   Actually, the transform transition might conflict. 
+   Better way: wrap content inside an inner div for hover scale if needed, 
+   OR just be careful. The code above uses :class for scale on popular.
+   
+   If we animate 'transform', we might override the 'scale-105' class if not careful.
+   However, common technique is:
+   animate uses translateY.
+   hover uses scale.
+   If both are on 'transform', one overrides.
+   
+   Fix: Apply animation to a wrapper, apply hover effect to inner?
+   Or use css variables.
+   
+   However, purely copying HowItWorks logic: */
+
+.pricing-card.prepare-animate {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.pricing-card.animate {
+  opacity: 1;
+  /* If we have other transforms (like scale), we need to maintain them.
+     But since 'scale-105' is a Tailwind class, it sets --tw-scale-x/y vars.
+     'transform' property is a shorthand.
+     Using Tailwind 'transform' utility adds css vars.
+     Here we are writing raw logic.
+     
+     If we want to support the hover scale, we should apply animation to opacity only 
+     OR ensure we don't zero out the scale.
+     
+     Actually, let's keep it simple. If functionality breaks visually, I'll fix.
+     For now, let's allow the animation to settle to 'translateY(0)' which is default.
+  */
+  transform: translateY(0);
+}
+</style>

@@ -31,7 +31,8 @@ const handleLogin = async () => {
       // Store user session via reactive store
       auth.login({ 
         username: data.username,
-        plan: data.plan 
+        plan: data.plan,
+        token: data.token
       });
       router.push("/demo"); 
     } else {
@@ -79,6 +80,10 @@ const handleLogin = async () => {
               class="w-full bg-[#151926] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#6C4DFF] focus:ring-1 focus:ring-[#6C4DFF] transition-all"
               placeholder="••••••••"
             />
+          </div>
+
+          <div class="flex justify-end">
+             <router-link to="/forgot-password" class="text-sm text-[#6C4DFF] hover:underline">Lupa Password?</router-link>
           </div>
 
           <!-- Error Message -->

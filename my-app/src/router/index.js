@@ -39,6 +39,8 @@ const routes = [
     { path: "/notifications", name: "NotificationSettings", component: NotificationSettings },
     { path: "/login", name: "Login", component: Login },
     { path: "/register", name: "Register", component: Register },
+    { path: "/forgot-password", name: "ForgotPassword", component: () => import("../pages/ForgotPassword.vue") },
+    { path: "/reset-password", name: "ResetPassword", component: () => import("../pages/ResetPassword.vue") },
     { path: "/profile", name: "Profile", component: Profile },
 
     // Footer Routes
