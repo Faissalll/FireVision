@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..utils.decorators import token_required
 from ..database import get_db_connection
-from ..services import detector
+# from ..services import detector (Removed: Service decoupled)
 
 user_bp = Blueprint('user', __name__, url_prefix='/api')
 
@@ -129,15 +129,9 @@ def notification_settings_api(current_user):
             c.execute(sql, vals)
             conn.commit()
             
-            # Update active sessions for this user
-            for sid, s in detector.sessions.items():
-                if s.get('owner') == username:
-                    # We need a new cursor for this check or reuse? Better create new.
-                    # Wait, we are already inside a function with connection 'conn'
-                    # Reuse 'conn' for this fetch
-                    c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
-                    s['notification_settings'] = c.fetchone()
-                    print(f"🔄 Updated live settings for session {sid}")
+            # Update active sessions for this user (REMOVED: Cross-service sync not implemented yet)
+            # Webhook or Polling will handle this in future.
+            pass
 
             return jsonify({'status': 'saved'})
         except Exception as e:
@@ -152,24 +146,10 @@ def notification_settings_api(current_user):
 def update_settings(current_user):
     data = request.get_json() or {}
     
-    target_session_id = data.get('session_id')
-    
-    if target_session_id:
-        if target_session_id in detector.sessions:
-            settings = detector.sessions[target_session_id]["settings"]
-            if 'sensitivity' in data: settings['sensitivity'] = data['sensitivity']
-            if 'smoothing' in data: settings['smoothing'] = data['smoothing']
-            if 'noiseReduction' in data: settings['noiseReduction'] = data['noiseReduction']
-            return jsonify({'status': 'updated', 'session_id': target_session_id})
-        else:
-            return jsonify({'error': 'Session not found'}), 404
-    else:
-        for sid in detector.sessions:
-            settings = detector.sessions[sid]["settings"]
-            if 'sensitivity' in data: settings['sensitivity'] = data['sensitivity']
-            if 'smoothing' in data: settings['smoothing'] = data['smoothing']
-            if 'noiseReduction' in data: settings['noiseReduction'] = data['noiseReduction']
-        return jsonify({'status': 'updated_all'})
+    # This endpoint is strictly for the AI service. 
+    # Since we are split, the backend cannot update the AI memory directly.
+    # Future: Send Webhook to AI Service to update settings.
+    return jsonify({'status': 'ignored', 'message': 'Feature disabled in Cloud Mode'}), 200
 
 @user_bp.route('/history', methods=['GET'])
 def get_history():
