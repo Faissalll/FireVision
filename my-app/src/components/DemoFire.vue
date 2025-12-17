@@ -108,7 +108,8 @@ const demoScenarios = [
 
 // --- KONFIGURASI BACKEND & KAMERA ---
 // Gunakan IP backend yang muncul di terminal Flask
-const API_BASE_URL = "http://127.0.0.1:5001";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://127.0.0.1:7860";
 
 // URL default kamera (boleh dikosongkan, user isi sendiri di UI)
 const DEFAULT_IP_CAMERA_URL = "";
@@ -224,7 +225,7 @@ async function startPollingDetections(activeSessionId) {
     pollerId.value = setInterval(async () => {
         try {
             const res = await fetch(
-                `${API_BASE_URL}/api/detections?session=${encodeURIComponent(
+                `${AI_BASE_URL}/api/detections?session=${encodeURIComponent(
                     activeSessionId
                 )}`,
                 { method: "GET", headers: { Accept: "application/json" } }
@@ -322,16 +323,18 @@ const playDemo = async () => {
         // Sensitivity removed
         const wasClamped = false;
 
-        const healthCheck = await fetch(`${API_BASE_URL}/api/health`, {
+        const healthCheck = await fetch(`${AI_BASE_URL}/api/health`, {
             method: "GET",
             signal: AbortSignal.timeout(3000),
         });
-        if (!healthCheck.ok) throw new Error("Backend is not responding");
+        if (!healthCheck.ok) throw new Error("AI Service is not responding");
 
-        const response = await fetch(`${API_BASE_URL}/api/start-detection`, {
+        const response = await fetch(`${AI_BASE_URL}/api/start-detection`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",
+                // Authorization removed for AI service? Or kept if shared secret? 
+                // AI Service doesn't have auth middleware yet according to __init__.py
                 "Authorization": `Bearer ${auth.user.token}`
             },
             body: JSON.stringify({
@@ -361,7 +364,7 @@ const playDemo = async () => {
         await nextTick();
 
         if (videoElement.value) {
-            videoElement.value.src = `${API_BASE_URL}/api/video-feed?session=${
+            videoElement.value.src = `${AI_BASE_URL}/api/video-feed?session=${
                 data.session_id
             }&t=${Date.now()}`;
             startProbeStreamReady();
@@ -402,7 +405,7 @@ const playDemo = async () => {
 const stopDetection = async () => {
     try {
         if (sessionId.value) {
-            await fetch(`${API_BASE_URL}/api/stop-detection`, {
+            await fetch(`${AI_BASE_URL}/api/stop-detection`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -436,7 +439,7 @@ const handleVideoError = (event) => {
     if (isDetecting.value && sessionId.value) {
         setTimeout(() => {
             if (videoElement.value && isDetecting.value) {
-                videoElement.value.src = `${API_BASE_URL}/api/video-feed?session=${
+                videoElement.value.src = `${AI_BASE_URL}/api/video-feed?session=${
                     sessionId.value
                 }&t=${Date.now()}`;
                 startProbeStreamReady();

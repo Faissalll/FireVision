@@ -6,6 +6,7 @@ const alarmAudio = new Audio(alarmSound);
 alarmAudio.loop = true;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://127.0.0.1:7860";
 
 const props = defineProps({
     maxCameras: {
@@ -154,7 +155,7 @@ const startCamera = async (index) => {
             camera_name: cam.name || `Kamera ${cam.id}`
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/start-detection`, {
+        const response = await fetch(`${AI_BASE_URL}/api/start-detection`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
@@ -188,7 +189,7 @@ const stopCamera = async (index) => {
     if (!cam.isRunning) return;
 
     try {
-        await fetch(`${API_BASE_URL}/api/stop-detection`, {
+        await fetch(`${AI_BASE_URL}/api/stop-detection`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ session_id: cam.sessionId })
@@ -208,7 +209,7 @@ const fetchDetections = async (index) => {
     if (!cam.sessionId) return;
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/detections?session=${cam.sessionId}`);
+        const res = await fetch(`${AI_BASE_URL}/api/detections?session=${cam.sessionId}`);
         if(res.ok) {
             const data = await res.json();
             cam.detections = data.boxes || [];
@@ -287,7 +288,7 @@ onUnmounted(() => {
 
                 <div class="video-window">
                     <img v-if="cam.isRunning && cam.sessionId" 
-                         :src="`${API_BASE_URL}/api/video-feed?session=${cam.sessionId}`" 
+                         :src="`${AI_BASE_URL}/api/video-feed?session=${cam.sessionId}`" 
                          class="video-feed" 
                     />
                     <div v-else class="video-placeholder">
