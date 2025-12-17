@@ -5,6 +5,7 @@ import time
 import os
 from ..utils.decorators import token_required
 from ..services.detector import load_model, generate_frames, sessions, model
+from ..services import detector
 # from ..database import get_db_connection (Removed for Microservice)
 
 stream_bp = Blueprint('stream', __name__, url_prefix='/api')
@@ -12,14 +13,6 @@ stream_bp = Blueprint('stream', __name__, url_prefix='/api')
 @stream_bp.route('/start-detection', methods=['POST'])
 @token_required
 def start_detection(current_user):
-    pass 
-
-# IMPLEMENTATION
-from ..services import detector
-
-@stream_bp.route('/start-detection', methods=['POST'])
-@token_required
-def start_detection_impl(current_user):
     try:
         if detector.model is None:
             print("Loading YOLO model...")
