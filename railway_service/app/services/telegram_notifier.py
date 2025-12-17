@@ -1,6 +1,3 @@
-import requests
-import cv2
-
 class TelegramNotifier:
     def __init__(self, token: str, chat_id: str, timeout: int = 15):
         self.token = token
@@ -30,13 +27,8 @@ class TelegramNotifier:
         r.raise_for_status()
         return r.json()
 
-    def send_photo_from_cv2(self, frame, caption: str | None = None, quality: int = 85):
-        ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
-        if not ok:
-            return self.send_message(caption or "🔔 Notifikasi dari FireVision")
-        return self.send_photo(buf.tobytes(), caption=caption)
+    # send_photo_from_cv2 REMOVED (Legacy, requires opencv-headless which is too heavy for backend)
 
     def send_notification(self, message: str, frame=None):
-        if frame is not None:
-            return self.send_photo_from_cv2(frame, caption=message)
+        # Frame ignored for now in minimal backend
         return self.send_message(message)
