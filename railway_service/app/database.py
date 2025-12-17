@@ -2,9 +2,14 @@ import mysql.connector
 import os
 
 def get_db_connection():
+    # DEBUG: Print connection source (Masked password)
+    host = os.getenv('DB_HOST') or os.getenv('MYSQLHOST', 'localhost')
+    user = os.getenv('DB_USER') or os.getenv('MYSQLUSER', 'root')
+    print(f"🔌 CONNECTING TO DB: Host={host}, User={user}")
+    
     return mysql.connector.connect(
-        host=os.getenv('DB_HOST') or os.getenv('MYSQLHOST', 'localhost'),
-        user=os.getenv('DB_USER') or os.getenv('MYSQLUSER', 'root'),
+        host=host,
+        user=user,
         password=os.getenv('DB_PASSWORD') or os.getenv('MYSQLPASSWORD', ''),
         database=os.getenv('DB_NAME') or os.getenv('MYSQLDATABASE', 'firevision'),
         port=int(os.getenv('DB_PORT') or os.getenv('MYSQLPORT', 3306))
@@ -12,6 +17,11 @@ def get_db_connection():
 
 def init_db():
     try:
+        print("🛠️ INITIALIZING DATABASE...")
+        # DEBUG: Print connection source (Masked password)
+        host=os.getenv('DB_HOST') or os.getenv('MYSQLHOST', 'localhost')
+        print(f"🔌 INIT CONNECTION TO: {host}")
+        
         # Connect to MySQL Server first to create DB if not exists
         conn = mysql.connector.connect(
             host=os.getenv('DB_HOST') or os.getenv('MYSQLHOST', 'localhost'),
