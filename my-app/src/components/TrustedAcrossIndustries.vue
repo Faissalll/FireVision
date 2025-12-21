@@ -18,7 +18,7 @@
                         class="relative h-64 bg-gradient-to-b from-gray-700 to-gray-900"
                     >
                         <img
-                            src="../assets/Industrial.jpg"
+                            src="../assets/industrial.jpg"
                             alt="Industrial Facilities"
                             class="w-full h-full object-cover"
                         />
