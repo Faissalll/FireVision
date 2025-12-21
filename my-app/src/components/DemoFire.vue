@@ -40,7 +40,14 @@ const videoElement = ref(null);
 const errorMessage = ref("");
 const sessionId = ref(null);
 
-// 🔹 tambahan supaya stopDetection tidak error
+// Browser Webcam Mode
+const browserVideoRef = ref(null);
+const browserCanvasRef = ref(null);
+const browserStream = ref(null);
+const webcamFrameLoopId = ref(null);
+const isBrowserWebcamMode = ref(false);
+
+// tambahan supaya stopDetection tidak error
 const videoSrc = ref("");
 
 const detections = ref([]);
@@ -115,7 +122,7 @@ const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://127.0.0.1:7860";
 const DEFAULT_IP_CAMERA_URL = "";
 
 // state sumber kamera & URL IP camera (diisi user)
-const cameraSource = ref("IPHONE"); // atau 
+const cameraSource = ref("WEBCAM"); // default ke webcam untuk local testing
 const ipCameraUrl = ref(DEFAULT_IP_CAMERA_URL);
 
 // --- LOCAL SETTINGS ---
@@ -304,6 +311,20 @@ function stopPollingDetections() {
 }
 
 const playDemo = async () => {
+    console.log("[playDemo] cameraSource.value =", cameraSource.value);
+    
+    // Route to browser webcam mode if WEBCAM selected
+    if (cameraSource.value === 'WEBCAM') {
+        console.log("[playDemo] Using browser webcam mode");
+        if (isDetecting.value) {
+            stopBrowserWebcam();
+        } else {
+            startBrowserWebcam();
+        }
+        return;
+    }
+    
+    // IP Camera / iPhone mode (existing logic)
     if (isDetecting.value) {
         stopDetection();
         return;
@@ -484,6 +505,200 @@ const checkBackendConnection = async () => {
     }
 };
 
+// ========== BROWSER WEBCAM MODE FUNCTIONS ==========
+const startBrowserWebcam = async () => {
+    if (isDetecting.value) {
+        stopBrowserWebcam();
+        return;
+    }
+
+    if (!auth.user || !auth.user.username) {
+        alert("Silakan login terlebih dahulu untuk menggunakan fitur deteksi.");
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        errorMessage.value = "";
+        
+        // Set flags FIRST so video element renders
+        isBrowserWebcamMode.value = true;
+        isDetecting.value = true;
+        isStreamReady.value = false;
+        
+        // Wait for DOM to render video element
+        await nextTick();
+        await nextTick(); // Double nextTick for safety
+        
+        // Request webcam access
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720 },
+            audio: false
+        });
+        
+        browserStream.value = stream;
+        
+        // Assign stream to video element
+        if (browserVideoRef.value) {
+            browserVideoRef.value.srcObject = stream;
+            await browserVideoRef.value.play();
+            isStreamReady.value = true;
+        } else {
+            console.error("browserVideoRef is null after nextTick!");
+            throw new Error("Video element not found");
+        }
+        
+        // Start frame processing loop
+        startWebcamFrameLoop();
+        
+    } catch (error) {
+        console.error("Error accessing webcam:", error);
+        isDetecting.value = false;
+        isBrowserWebcamMode.value = false;
+        isStreamReady.value = false;
+        
+        if (error.name === 'NotAllowedError') {
+            errorMessage.value = "Izin kamera ditolak. Mohon berikan izin kamera di browser.";
+        } else if (error.name === 'NotFoundError') {
+            errorMessage.value = "Webcam tidak ditemukan di perangkat ini.";
+        } else {
+            errorMessage.value = `Error webcam: ${error.message}`;
+        }
+        alert(errorMessage.value);
+    }
+};
+
+const stopBrowserWebcam = () => {
+    // Stop frame loop
+    if (webcamFrameLoopId.value) {
+        cancelAnimationFrame(webcamFrameLoopId.value);
+        webcamFrameLoopId.value = null;
+    }
+    
+    // Stop media stream
+    if (browserStream.value) {
+        browserStream.value.getTracks().forEach(track => track.stop());
+        browserStream.value = null;
+    }
+    
+    // Clear video element
+    if (browserVideoRef.value) {
+        browserVideoRef.value.srcObject = null;
+    }
+    
+    isDetecting.value = false;
+    isBrowserWebcamMode.value = false;
+    isStreamReady.value = false;
+    detections.value = [];
+    
+    // Stop audio
+    if (!alarmAudio.paused) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+    }
+};
+
+const startWebcamFrameLoop = () => {
+    const processLoop = async () => {
+        if (!isDetecting.value || !isBrowserWebcamMode.value) return;
+        
+        await processWebcamFrame();
+        
+        // Continue loop at ~10 FPS to avoid overloading server
+        webcamFrameLoopId.value = setTimeout(() => {
+            if (isDetecting.value && isBrowserWebcamMode.value) {
+                requestAnimationFrame(processLoop);
+            }
+        }, 100); // 100ms = 10 FPS
+    };
+    
+    requestAnimationFrame(processLoop);
+};
+
+const processWebcamFrame = async () => {
+    if (!browserVideoRef.value || !browserCanvasRef.value) return;
+    
+    const video = browserVideoRef.value;
+    const canvas = browserCanvasRef.value;
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size to match video
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    
+    // Draw current frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert to base64
+    const frameData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    try {
+        const response = await fetch(`${AI_BASE_URL}/api/process-frame`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${auth.user.token}`
+            },
+            body: JSON.stringify({
+                frame: frameData,
+                sensitivity: 70
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("Frame processing error:", errorData);
+            return;
+        }
+        
+        const data = await response.json();
+        
+        // Debug log
+        console.log("[WEBCAM] API Response:", data);
+        
+        if (data.success) {
+            // Update detections for overlay
+            const mappedDetections = data.detections.map((d, idx) => ({
+                id: idx,
+                label: d.class,
+                confidence: d.confidence * 100,
+                style: boxToStyle(d, { w: data.frame_width, h: data.frame_height })
+            }));
+            
+            console.log("[WEBCAM] Mapped detections:", mappedDetections);
+            detections.value = mappedDetections;
+            
+            // Handle fire detection alarm
+            if (data.fire_detected) {
+                if (enableSound.value && alarmAudio.paused) {
+                    alarmAudio.volume = volumeAlarm.value / 100;
+                    alarmAudio.play().catch(e => console.warn("Audio:", e));
+                }
+                
+                // Browser notification (throttled)
+                if (enablePopup.value && "Notification" in window && Notification.permission === "granted") {
+                    const now = Date.now();
+                    if (!processWebcamFrame.lastNotify || now - processWebcamFrame.lastNotify > 5000) {
+                        new Notification("PERINGATAN API!", {
+                            body: "Api terdeteksi! Segera tindak lanjuti.",
+                            icon: "/favicon.ico"
+                        });
+                        processWebcamFrame.lastNotify = now;
+                    }
+                }
+            } else {
+                if (!alarmAudio.paused) {
+                    alarmAudio.pause();
+                    alarmAudio.currentTime = 0;
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error processing frame:", error);
+    }
+};
+// ========== END BROWSER WEBCAM MODE ==========
+
 onUnmounted(() => {
     console.log("Component unmounting, cleaning up...");
     if (isDetecting.value) {
@@ -491,6 +706,7 @@ onUnmounted(() => {
     }
     stopPollingDetections();
     stopProbeStreamReady();
+    stopBrowserWebcam(); // Cleanup browser webcam
     
     // Stop audio cleanup
     if (alarmAudio) {
@@ -734,8 +950,20 @@ onMounted(async () => {
             <div class="video-container">
                 <div class="video-wrapper">
                     <div class="demo-image-wrapper">
+                        <!-- Browser Webcam Video (for WEBCAM mode) -->
+                        <video
+                            v-if="isDetecting && isBrowserWebcamMode"
+                            ref="browserVideoRef"
+                            class="demo-video"
+                            autoplay
+                            muted
+                            playsinline
+                        ></video>
+                        <canvas ref="browserCanvasRef" style="display: none;"></canvas>
+                        
+                        <!-- IP Camera Stream (for IPHONE/IP_CAMERA mode) -->
                         <img
-                            v-if="isDetecting"
+                            v-if="isDetecting && !isBrowserWebcamMode"
                             ref="videoElement"
                             class="demo-video"
                             alt="Fire Detection Stream"
@@ -1091,8 +1319,11 @@ onMounted(async () => {
 .demo-video {
     width: 100%;
     height: auto;
+    min-height: 480px;
     display: block;
     background: #000;
+    object-fit: contain;
+    border-radius: 12px;
 }
 .overlay-layer {
     position: absolute;
