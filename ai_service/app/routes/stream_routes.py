@@ -85,14 +85,26 @@ def start_detection(current_user):
             try: cam_idx = int(cam_idx)
             except: pass
             
-            camera_obj = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
-            if not camera_obj.isOpened():
-                print(f"Index {cam_idx} gagal, mencoba fallback ke 0...")
-                camera_obj = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            # CLOUD COMPATIBILITY FIX:
+            # 1. Remove cv2.CAP_DSHOW (Windows only, crashes on Linux/Cloud)
+            # 2. Add fallback/error handling for cloud servers with no webcam
+            
+            try:
+                # Try default backend first
+                camera_obj = cv2.VideoCapture(cam_idx)
+                
+                if not camera_obj.isOpened():
+                    print(f"Index {cam_idx} gagal opened, trying index 0...")
+                    camera_obj = cv2.VideoCapture(0)
+            except Exception as e:
+                print(f"Error opening webcam: {e}")
+                camera_obj = None
 
         if not camera_obj or not camera_obj.isOpened():
             print("❌ GAGAL: Kamera tidak bisa dibuka.")
-            return jsonify({'error': 'Failed to open camera. Check connection/URL.'}), 500
+            return jsonify({
+                'error': 'Server Cloud cannot access local webcam. Please use IP Camera option.'
+            }), 500
 
         detector.sessions[session_id_str] = {
             "camera": camera_obj,

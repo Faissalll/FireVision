@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { auth } from "../store/auth";
 
-const isMenuOpen = ref(false);
+const isMobileMenuOpen = ref(false);
 const isProfileMenuOpen = ref(false);
 const router = useRouter();
 const route = useRoute();
@@ -17,7 +17,7 @@ const getDisplayName = (username) => {
 
 const handleLogout = () => {
     auth.logout();
-    isMenuOpen.value = false;
+    isMobileMenuOpen.value = false;
     router.push("/");
 };
 
@@ -30,11 +30,11 @@ const menuItems = [
 ];
 
 const toggleMenu = () => {
-    isMenuOpen.value = !isMenuOpen.value;
+    isMobileMenuOpen.value = !isMobileMenuOpen.value;
 };
 
 const navigateTo = (path) => {
-    isMenuOpen.value = false;
+    isMobileMenuOpen.value = false;
     isProfileMenuOpen.value = false;
     router.push(path);
 };
@@ -111,7 +111,7 @@ const isActive = (path) => {
                     <div class="relative">
                         <button 
                             @click="isProfileMenuOpen = !isProfileMenuOpen"
-                            @blur="setTimeout(() => isProfileMenuOpen = false, 200)"
+                            @blur="closeProfileMenu"
                             class="w-10 h-10 rounded-full bg-[#2A2A35] border border-gray-600 flex items-center justify-center hover:border-[#6C4DFF] transition-all overflow-hidden group focus:outline-none focus:ring-2 focus:ring-[#6C4DFF]/50"
                         >
                             <span class="font-bold text-[#6C4DFF] group-hover:scale-110 transition-transform">{{ auth.user.username.charAt(0).toUpperCase() }}</span>
