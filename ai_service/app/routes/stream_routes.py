@@ -13,6 +13,7 @@ stream_bp = Blueprint('stream', __name__, url_prefix='/api')
 @stream_bp.route('/start-detection', methods=['POST'])
 @token_required
 def start_detection(current_user):
+    print("🚀 Start Detection Triggered")
     try:
         if detector.model is None:
             print("Loading YOLO model...")

@@ -44,4 +44,15 @@ def create_app():
             'active_sessions': len(sessions)
         })
         
+    @app.errorhandler(500)
+    def internal_error(error):
+        return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # pass through HTTP errors
+        if isinstance(e,  (int, str)): 
+             return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
+        
     return app
