@@ -352,8 +352,17 @@ const playDemo = async () => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || "Failed to start detection");
+            let errorMsg = "Failed to start detection";
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorData.message || errorMsg;
+            } catch (jsonErr) {
+                // If JSON fails, read text (likely HTML 500)
+                const rawText = await response.text();
+                console.error("Non-JSON Error Response:", rawText);
+                errorMsg = `Server Error (${response.status}): ${rawText.substring(0, 50)}...`;
+            }
+            throw new Error(errorMsg);
         }
 
         const data = await response.json();
