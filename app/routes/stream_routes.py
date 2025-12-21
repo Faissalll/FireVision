@@ -141,3 +141,93 @@ def video_feed():
         generate_frames(session_id), 
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
+
+@stream_bp.route('/process-frame', methods=['POST'])
+@token_required
+def process_frame(current_user):
+    """
+    Process a single frame from browser webcam.
+    Accepts: multipart/form-data with 'frame' file or JSON with 'frame' as base64
+    Returns: JSON with detections
+    """
+    try:
+        import base64
+        import numpy as np
+        
+        # Load model if not loaded
+        if detector.model is None:
+            print("[PROCESS_FRAME] Loading YOLO model...")
+            if not detector.load_model():
+                return jsonify({'error': 'Failed to load model'}), 500
+        
+        frame = None
+        sensitivity = 70
+        
+        # Try to get frame from form data (file upload)
+        if 'frame' in request.files:
+            file = request.files['frame']
+            file_bytes = np.frombuffer(file.read(), np.uint8)
+            frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            sensitivity = int(request.form.get('sensitivity', 70))
+        
+        # Try to get frame from JSON (base64)
+        elif request.is_json:
+            data = request.get_json()
+            if 'frame' in data:
+                # Remove data URL prefix if present
+                frame_data = data['frame']
+                if ',' in frame_data:
+                    frame_data = frame_data.split(',')[1]
+                
+                frame_bytes = base64.b64decode(frame_data)
+                nparr = np.frombuffer(frame_bytes, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                sensitivity = int(data.get('sensitivity', 70))
+        
+        if frame is None:
+            return jsonify({'error': 'No frame provided'}), 400
+        
+        # Run detection
+        conf_threshold = sensitivity / 100.0
+        results = detector.model(frame, conf=conf_threshold, verbose=False)
+        
+        detections = []
+        fire_detected = False
+        
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+                
+                if hasattr(detector.model, "names"):
+                    class_name = detector.model.names[class_id]
+                else:
+                    class_name = str(class_id)
+                
+                if class_name.lower() in ['fire', 'smoke']:
+                    fire_detected = True
+                
+                detections.append({
+                    "class": class_name,
+                    "confidence": confidence,
+                    "x": x1,
+                    "y": y1,
+                    "w": x2 - x1,
+                    "h": y2 - y1
+                })
+        
+        return jsonify({
+            'success': True,
+            'fire_detected': fire_detected,
+            'detections': detections,
+            'frame_width': frame.shape[1],
+            'frame_height': frame.shape[0]
+        })
+        
+    except Exception as e:
+        print(f"[PROCESS_FRAME] ERROR: {e}")
+        return jsonify({'error': str(e)}), 500
