@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onUnmounted } from 'vue';
 import alarmSound from "../assets/alarm.mp3";
+import { auth } from "../store/auth";
 
 const alarmAudio = new Audio(alarmSound);
 alarmAudio.loop = true;
@@ -155,9 +156,13 @@ const startCamera = async (index) => {
             camera_name: cam.name || `Kamera ${cam.id}`
         };
 
+        const token = auth.user?.token || user?.token || '';
         const response = await fetch(`${AI_BASE_URL}/api/start-detection`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify(payload)
         });
 
@@ -189,9 +194,13 @@ const stopCamera = async (index) => {
     if (!cam.isRunning) return;
 
     try {
+        const token = auth.user?.token || '';
         await fetch(`${AI_BASE_URL}/api/stop-detection`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify({ session_id: cam.sessionId })
         });
     } catch (e) {
