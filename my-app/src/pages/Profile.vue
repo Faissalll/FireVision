@@ -29,7 +29,7 @@ const fetchProfile = async () => {
     }
 
     try {
-        const res = await fetch('/api/profile', {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile`, {
             headers: { 'Authorization': token }
         });
         
@@ -76,7 +76,7 @@ const saveProfile = async () => {
   if (!token) return;
 
   try {
-      const res = await fetch('/api/profile', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile`, {
           method: 'PUT',
           headers: { 
               'Content-Type': 'application/json',
