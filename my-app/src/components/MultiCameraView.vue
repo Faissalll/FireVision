@@ -16,16 +16,20 @@ const props = defineProps({
     }
 });
 
-// Original Data Source
+// Original Data Source - added browser webcam properties
 const allCameras = ref([
-    { id: 1, name: "Kamera 1", source: "WEBCAM", url: "", isRunning: false, sessionId: null, detections: [] },
-    { id: 2, name: "Kamera 2", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [] },
-    { id: 3, name: "Kamera 3", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [] },
-    { id: 4, name: "Kamera 4", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [] },
+    { id: 1, name: "Kamera 1", source: "WEBCAM", url: "", isRunning: false, sessionId: null, detections: [], browserStream: null, loopId: null },
+    { id: 2, name: "Kamera 2", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [], browserStream: null, loopId: null },
+    { id: 3, name: "Kamera 3", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [], browserStream: null, loopId: null },
+    { id: 4, name: "Kamera 4", source: "IP_CAMERA", url: "", isRunning: false, sessionId: null, detections: [], browserStream: null, loopId: null },
 ]);
 
+// Refs for video and canvas elements (indexed by camera id)
+const videoRefs = ref({});
+const canvasRefs = ref({});
+
 // Computed to filter based on prop
-import { computed } from 'vue';
+import { computed, nextTick } from 'vue';
 const cameras = computed(() => {
     return allCameras.value.slice(0, props.maxCameras);
 });
@@ -137,12 +141,19 @@ const startCamera = async (index) => {
     const cam = cameras.value[index];
     if (cam.isRunning) return;
 
+    // WEBCAM mode - use browser webcam capture
+    if (cam.source === "WEBCAM") {
+        await startBrowserWebcam(index);
+        return;
+    }
+
     // VALIDATION: Check URL for IP Camera
     if (cam.source === "IP_CAMERA" && !cam.url.trim()) {
         alert("Mohon masukkan URL kamera terlebih dahulu (contoh: http://192.168.1.5:8080/video).");
         return;
     }
 
+    // IP Camera mode - use server-side detection
     try {
         const userStr = localStorage.getItem("user");
         const user = userStr ? JSON.parse(userStr) : null;
@@ -151,7 +162,7 @@ const startCamera = async (index) => {
         const payload = {
             camera_source: cam.source,
             ip_camera_url: cam.url,
-            sensitivity: 70, // default
+            sensitivity: 70,
             username: username,
             camera_name: cam.name || `Kamera ${cam.id}`
         };
@@ -180,7 +191,6 @@ const startCamera = async (index) => {
         cam.sessionId = data.session_id;
         cam.isRunning = true;
 
-        // Start polling detections for this camera
         pollers[cam.id] = setInterval(() => fetchDetections(index), 500);
 
     } catch (e) {
@@ -189,22 +199,147 @@ const startCamera = async (index) => {
     }
 };
 
+// Browser Webcam Mode Functions
+const startBrowserWebcam = async (index) => {
+    const cam = cameras.value[index];
+    
+    try {
+        cam.isRunning = true;
+        cam.detections = [];
+        
+        await nextTick();
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480 },
+            audio: false
+        });
+        
+        cam.browserStream = stream;
+        
+        await nextTick();
+        
+        const videoEl = videoRefs.value[cam.id];
+        if (videoEl) {
+            videoEl.srcObject = stream;
+            await videoEl.play();
+        }
+        
+        // Start frame processing loop
+        startWebcamLoop(index);
+        
+    } catch (error) {
+        console.error("Error accessing webcam:", error);
+        cam.isRunning = false;
+        
+        if (error.name === 'NotAllowedError') {
+            alert("Izin kamera ditolak. Mohon berikan izin kamera di browser.");
+        } else if (error.name === 'NotFoundError') {
+            alert("Webcam tidak ditemukan.");
+        } else {
+            alert(`Error webcam: ${error.message}`);
+        }
+    }
+};
+
+const startWebcamLoop = (index) => {
+    const cam = cameras.value[index];
+    
+    const processLoop = async () => {
+        if (!cam.isRunning || cam.source !== 'WEBCAM') return;
+        
+        await processWebcamFrame(index);
+        
+        cam.loopId = setTimeout(() => {
+            if (cam.isRunning) {
+                requestAnimationFrame(processLoop);
+            }
+        }, 150); // ~7 FPS to reduce load
+    };
+    
+    requestAnimationFrame(processLoop);
+};
+
+const processWebcamFrame = async (index) => {
+    const cam = cameras.value[index];
+    const videoEl = videoRefs.value[cam.id];
+    const canvasEl = canvasRefs.value[cam.id];
+    
+    if (!videoEl || !canvasEl) return;
+    
+    const ctx = canvasEl.getContext('2d');
+    canvasEl.width = videoEl.videoWidth || 640;
+    canvasEl.height = videoEl.videoHeight || 480;
+    ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+    
+    const frameData = canvasEl.toDataURL('image/jpeg', 0.7);
+    
+    try {
+        const token = auth.user?.token || '';
+        const response = await fetch(`${AI_BASE_URL}/api/process-frame`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                frame: frameData,
+                sensitivity: 70
+            })
+        });
+        
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            cam.detections = data.detections.map((d, idx) => ({
+                id: idx,
+                label: d.class,
+                confidence: d.confidence * 100,
+                x: d.x, y: d.y, w: d.w, h: d.h
+            }));
+        }
+    } catch (error) {
+        // Silent
+    }
+    
+    checkAlarmStatus();
+};
+
 const stopCamera = async (index) => {
     const cam = cameras.value[index];
     if (!cam.isRunning) return;
 
-    try {
-        const token = auth.user?.token || '';
-        await fetch(`${AI_BASE_URL}/api/stop-detection`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ session_id: cam.sessionId })
-        });
-    } catch (e) {
-        console.error(e);
+    // Stop webcam loop if browser webcam mode
+    if (cam.loopId) {
+        clearTimeout(cam.loopId);
+        cam.loopId = null;
+    }
+    
+    // Stop browser stream if exists
+    if (cam.browserStream) {
+        cam.browserStream.getTracks().forEach(track => track.stop());
+        cam.browserStream = null;
+        
+        const videoEl = videoRefs.value[cam.id];
+        if (videoEl) videoEl.srcObject = null;
+    }
+
+    // Stop server session if IP camera mode
+    if (cam.sessionId) {
+        try {
+            const token = auth.user?.token || '';
+            await fetch(`${AI_BASE_URL}/api/stop-detection`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ session_id: cam.sessionId })
+            });
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     cam.isRunning = false;
@@ -296,10 +431,21 @@ onUnmounted(() => {
                 </div>
 
                 <div class="video-window">
-                    <img v-if="cam.isRunning && cam.sessionId" 
+                    <!-- Hidden Canvas for Frame Capture -->
+                    <canvas :ref="el => { if (el) canvasRefs[cam.id] = el }" style="display: none;"></canvas>
+                    
+                    <!-- Browser Webcam Video -->
+                    <video v-if="cam.isRunning && cam.source === 'WEBCAM'"
+                           :ref="el => { if (el) videoRefs[cam.id] = el }"
+                           class="video-feed"
+                           autoplay muted playsinline
+                    ></video>
+                    <!-- IP Camera Stream -->
+                    <img v-else-if="cam.isRunning && cam.sessionId" 
                          :src="`${AI_BASE_URL}/api/video-feed?session=${cam.sessionId}`" 
                          class="video-feed" 
                     />
+                    <!-- Offline Placeholder -->
                     <div v-else class="video-placeholder">
                         <span class="placeholder-text">Camera Offline</span>
                     </div>
