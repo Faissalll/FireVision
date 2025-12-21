@@ -131,6 +131,9 @@ def start_detection(current_user):
     except Exception as e:
         print(f"Error starting detection: {e}")
         return jsonify({'error': str(e)}), 500
+        
+    # Safety net for any control flow fall-through
+    return jsonify({'error': 'Unexpected Server Error (Fallthrough)'}), 500
 
 @stream_bp.route('/stop-detection', methods=['POST'])
 @token_required
