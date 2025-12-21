@@ -292,11 +292,18 @@ const processWebcamFrame = async (index) => {
         const data = await response.json();
         
         if (data.success) {
+            const frameW = data.frame_width || 640;
+            const frameH = data.frame_height || 480;
+            
             cam.detections = data.detections.map((d, idx) => ({
                 id: idx,
                 label: d.class,
                 confidence: d.confidence * 100,
-                x: d.x, y: d.y, w: d.w, h: d.h
+                // Convert to percentages for responsive scaling
+                left: (d.x / frameW) * 100,
+                top: (d.y / frameH) * 100,
+                width: (d.w / frameW) * 100,
+                height: (d.h / frameH) * 100
             }));
         }
     } catch (error) {
@@ -455,10 +462,10 @@ onUnmounted(() => {
                         <div v-for="box in cam.detections" :key="box.id"
                              class="detection-box"
                              :style="{
-                                 left: `${box.x}px`,
-                                 top: `${box.y}px`,
-                                 width: `${box.w}px`,
-                                 height: `${box.h}px`
+                                 left: `${box.left}%`,
+                                 top: `${box.top}%`,
+                                 width: `${box.width}%`,
+                                 height: `${box.height}%`
                              }">
                              <span class="label">{{ box.label }} {{ Math.round(box.confidence) }}%</span>
                         </div>
