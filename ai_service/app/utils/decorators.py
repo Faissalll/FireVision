@@ -17,7 +17,12 @@ def token_required(f):
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = data['username']
         except Exception as e:
+            print(f"Auth Error: {e}")
             return jsonify({'message': 'Token is invalid!', 'error': str(e)}), 401
         
-        return f(current_user, *args, **kwargs)
+        print(f"Token Valid for user: {current_user}")
+        result = f(current_user, *args, **kwargs)
+        if result is None:
+            print("❌ Decorated function returned None!")
+        return result
     return decorated

@@ -13,20 +13,25 @@ stream_bp = Blueprint('stream', __name__, url_prefix='/api')
 @stream_bp.route('/start-detection', methods=['POST'])
 @token_required
 def start_detection(current_user):
-    print("🚀 Start Detection Triggered")
     try:
+        print("[START_DETECTION] Triggered for user:", current_user)
+        
         if detector.model is None:
-            print("Loading YOLO model...")
+            print("[START_DETECTION] Loading YOLO model...")
             if not detector.load_model():
+                print("[START_DETECTION] ERROR: Failed to load model")
                 return jsonify({'error': 'Failed to load model best.pt'}), 500
         
         data = request.get_json() or {}
         username = current_user
         if not username:
-             return jsonify({'error': 'Username required'}), 400
+            print("[START_DETECTION] ERROR: No username")
+            return jsonify({'error': 'Username required'}), 400
 
         camera_source = str(data.get('camera_source', 'WEBCAM')).upper()
         ip_camera_url = data.get('ip_camera_url') 
+        
+        print(f"[START_DETECTION] Camera source: {camera_source}, IP URL: {ip_camera_url}")
         
         # Init Settings
         initial_settings = {
@@ -42,26 +47,34 @@ def start_detection(current_user):
         camera_obj = None
         if camera_source in ['IPHONE', 'IP_CAMERA']:
             if not ip_camera_url:
+                print("[START_DETECTION] ERROR: IP Camera URL empty")
                 return jsonify({'error': 'URL IP Camera kosong!'}), 400
             try:
+                print(f"[START_DETECTION] Opening IP camera: {ip_camera_url}")
                 camera_obj = cv2.VideoCapture(ip_camera_url)
                 if not camera_obj.isOpened():
+                    print("[START_DETECTION] First attempt failed, retrying...")
                     time.sleep(1)
                     camera_obj = cv2.VideoCapture(ip_camera_url)
             except Exception as e:
-                print(f"Error opening IP cam: {e}")
+                print(f"[START_DETECTION] Error opening IP cam: {e}")
+                return jsonify({'error': f'Failed to open IP camera: {str(e)}'}), 500
         else:
-            # Webcam Fallback Logic
+            # Webcam - will likely fail on cloud
             try:
                 cam_idx = int(data.get('camera_index', 0))
+                print(f"[START_DETECTION] Opening webcam index: {cam_idx}")
                 camera_obj = cv2.VideoCapture(cam_idx)
                 if not camera_obj.isOpened():
+                    print("[START_DETECTION] Webcam 0 failed, trying default...")
                     camera_obj = cv2.VideoCapture(0)
             except Exception as e:
-                print(f"Error opening webcam: {e}")
+                print(f"[START_DETECTION] Error opening webcam: {e}")
+                return jsonify({'error': f'Failed to open webcam: {str(e)}'}), 500
                 
         # Critical Check
-        if not camera_obj or not camera_obj.isOpened():
+        if camera_obj is None or not camera_obj.isOpened():
+            print("[START_DETECTION] ERROR: Camera not opened")
             return jsonify({'error': 'Server Cloud cannot access local webcam. Use IP Camera.'}), 500
 
         # Start Session
@@ -80,14 +93,12 @@ def start_detection(current_user):
             "camera_name": data.get('camera_name', 'Camera')
         }
 
+        print(f"[START_DETECTION] SUCCESS: Session created: {session_id_str}")
         return jsonify({'status': 'started', 'session_id': session_id_str})
 
     except Exception as e:
-        print(f"Error starting detection: {e}")
-        return jsonify({'error': str(e)}), 500
-    
-    # Ultimate Safety Net (Should be unreachable if all paths above return)
-    return jsonify({'error': 'Unexpected Server Error (Fallthrough)'}), 500
+        print(f"[START_DETECTION] EXCEPTION: {type(e).__name__}: {e}")
+        return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 @stream_bp.route('/stop-detection', methods=['POST'])
 @token_required
