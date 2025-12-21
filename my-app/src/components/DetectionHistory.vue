@@ -18,7 +18,7 @@ const itemsPerPage = 8;
 // Fetch Data from Backend
 const fetchHistory = async () => {
     try {
-        const response = await fetch("http://localhost:5001/api/history");
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/history`);
         if (!response.ok) throw new Error("Gagal mengambil data");
         const data = await response.json();
         historyData.value = data;
@@ -32,7 +32,7 @@ const fetchHistory = async () => {
 // Update Status Logic
 const updateStatus = async (item, newStatus) => {
     try {
-        const response = await fetch("http://localhost:5001/api/history/update-status", {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/history/update-status`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ db_id: item.db_id, status: newStatus })

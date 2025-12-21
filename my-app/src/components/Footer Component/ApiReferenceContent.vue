@@ -5,7 +5,7 @@
             Kembali
         </button>
         <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">FireVision API Reference</h1>
-        <p class="text-gray-400 mb-10">Versi 1.0.0 • Base URL: <code class="bg-gray-800 px-2 py-1 rounded text-[#6C4DFF]">http://localhost:5001/api</code></p>
+        <p class="text-gray-400 mb-10">Versi 1.0.0 • Base URL: <code class="bg-gray-800 px-2 py-1 rounded text-[#6C4DFF]">{{ apiBaseUrl }}/api</code></p>
         
         <div class="space-y-8">
             <!-- Endpoint 1 -->

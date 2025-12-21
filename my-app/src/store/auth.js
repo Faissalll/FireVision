@@ -11,5 +11,6 @@ export const auth = reactive({
     logout() {
         this.user = null;
         localStorage.removeItem('user');
+        window.location.href = '/'; 
     }
 });

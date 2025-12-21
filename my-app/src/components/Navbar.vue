@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { auth } from "../store/auth";
 
 const isMenuOpen = ref(false);
+const isProfileMenuOpen = ref(false);
 const router = useRouter();
 const route = useRoute();
 
@@ -34,6 +35,7 @@ const toggleMenu = () => {
 
 const navigateTo = (path) => {
     isMenuOpen.value = false;
+    isProfileMenuOpen.value = false;
     router.push(path);
 };
 
@@ -105,9 +107,43 @@ const isActive = (path) => {
                         <span class="text-xs text-green-400">Online</span>
                     </div>
                     
-                    <button @click="navigateTo('/profile')" class="w-10 h-10 rounded-full bg-[#2A2A35] border border-gray-600 flex items-center justify-center hover:border-[#6C4DFF] transition-all overflow-hidden group">
-                        <span class="font-bold text-[#6C4DFF] group-hover:scale-110 transition-transform">{{ auth.user.username.charAt(0).toUpperCase() }}</span>
-                    </button>
+                    <!-- Dropdown Container -->
+                    <div class="relative">
+                        <button 
+                            @click="isProfileMenuOpen = !isProfileMenuOpen"
+                            @blur="setTimeout(() => isProfileMenuOpen = false, 200)"
+                            class="w-10 h-10 rounded-full bg-[#2A2A35] border border-gray-600 flex items-center justify-center hover:border-[#6C4DFF] transition-all overflow-hidden group focus:outline-none focus:ring-2 focus:ring-[#6C4DFF]/50"
+                        >
+                            <span class="font-bold text-[#6C4DFF] group-hover:scale-110 transition-transform">{{ auth.user.username.charAt(0).toUpperCase() }}</span>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div 
+                            v-show="isProfileMenuOpen"
+                            class="absolute right-0 mt-2 w-48 bg-[#1A1625] border border-gray-700 rounded-xl shadow-xl py-2 z-50 transform origin-top-right transition-all duration-200"
+                        >
+                            <div class="px-4 py-2 border-b border-gray-700 mb-2">
+                                <p class="text-xs text-gray-400">Login sebagai</p>
+                                <p class="text-sm font-semibold text-white truncate">{{ auth.user.username }}</p>
+                            </div>
+                            
+                            <button 
+                                @click="navigateTo('/profile')"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#6C4DFF]/20 transition-colors flex items-center gap-2"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                Profil Saya
+                            </button>
+                            
+                            <button 
+                                @click="handleLogout"
+                                class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                Keluar
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Mobile Menu Button -->

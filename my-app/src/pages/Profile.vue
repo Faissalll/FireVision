@@ -200,8 +200,13 @@ const handleLogout = () => {
 
         </div>
         
-        <div v-else class="text-center py-10 text-gray-400">
-            Gagal memuat profil. <button @click="fetchProfile" class="text-[#6C4DFF] hover:underline">Coba lagi</button>
+        <div v-else class="text-center py-10 flex flex-col items-center gap-4">
+            <p class="text-gray-400">Gagal memuat profil.</p>
+            <div class="flex gap-4">
+                <button @click="fetchProfile" class="text-[#6C4DFF] hover:underline">Coba lagi</button>
+                <span class="text-gray-600">|</span>
+                <button @click="handleLogout" class="text-red-500 hover:text-red-400 hover:underline">Keluar</button>
+            </div>
         </div>
 
         <!-- Recent Activity Placeholder -->
