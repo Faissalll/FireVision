@@ -141,3 +141,53 @@ def video_feed():
         generate_frames(session_id), 
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
+
+@stream_bp.route('/process-frame', methods=['POST', 'OPTIONS'])
+def process_frame():
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        data = request.get_json()
+        if not data or 'frame' not in data:
+            return jsonify({'error': 'No frame data provided'}), 400
+        
+        frame_data = data['frame']
+        sensitivity = data.get('sensitivity', 70)
+        
+        import base64
+        import numpy as np
+        
+        if ',' in frame_data:
+            frame_data = frame_data.split(',')[1]
+        
+        img_bytes = base64.b64decode(frame_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return jsonify({'error': 'Failed to decode frame'}), 400
+        
+        if detector.model is None:
+            if not detector.load_model():
+                return jsonify({'error': 'Failed to load model'}), 500
+        
+        session_data = {
+            "settings": {"sensitivity": sensitivity},
+            "frame_counter": 0
+        }
+        
+        from ..services.detector import detect_fire
+        annotated_frame, fire_detected, detections = detect_fire(frame, session_data)
+        
+        return jsonify({
+            'success': True,
+            'fire_detected': fire_detected,
+            'detections': detections,
+            'frame_width': frame.shape[1],
+            'frame_height': frame.shape[0]
+        })
+        
+    except Exception as e:
+        print(f"[PROCESS_FRAME] Error: {e}")
+        return jsonify({'error': str(e)}), 500

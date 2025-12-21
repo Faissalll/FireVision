@@ -1,0 +1,12 @@
+# Exclude large model files (only keep best (17).pt)
+best (11).pt
+best (13).pt
+best (2).pt
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Database
+*.db
