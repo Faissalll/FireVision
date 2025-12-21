@@ -17,6 +17,7 @@ COPY . .
 
 # Environment Variables (Default)
 ENV FLASK_APP=main.py
+ENV REFRESH_DATE=2025-12-22_FORCE_REBUILD
 
 # Run with Gunicorn (or Python direct for threading)
 # Using python direct because we rely on Threading for RTSP loop
