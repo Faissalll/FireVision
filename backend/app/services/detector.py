@@ -4,7 +4,16 @@ import time
 import math
 import uuid
 from datetime import datetime
-from ultralytics import YOLO
+
+# Make YOLO optional - Railway backend doesn't need it (AI handled by HF)
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
+    YOLO = None
+    print("⚠️ ultralytics not installed - AI detection disabled on this server")
+
 import mysql.connector
 from .notifier import TelegramNotifier, EmailNotifier, SMSNotifier
 from ..database import get_db_connection
@@ -15,11 +24,13 @@ sessions = {}
 
 def load_model():
     global model
-    # Adjust path to match original location relative to this file? 
-    # Original: backend/best (17).pt
-    # New file: backend/app/services/detector.py
-    # Model is at: ../../best (17).pt
     
+    # Check if YOLO is available (might not be on Railway backend)
+    if not YOLO_AVAILABLE:
+        print("⚠️ YOLO not available - model loading skipped (AI handled by HF)")
+        return False
+    
+    # Adjust path to match original location relative to this file
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) # backend/
     model_path = os.path.join(base_dir, 'best (13).pt')
     
