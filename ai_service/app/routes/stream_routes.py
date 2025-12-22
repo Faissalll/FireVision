@@ -79,6 +79,24 @@ def start_detection(current_user):
 
         # Start Session
         session_id_str = str(uuid.uuid4())
+        
+        # Load notification settings from database
+        notification_settings = {"telegram_enabled": False, "email_enabled": False}
+        try:
+            from ..database import get_db_connection
+            conn = get_db_connection()
+            c = conn.cursor(dictionary=True)
+            c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+            db_settings = c.fetchone()
+            if db_settings:
+                notification_settings = db_settings
+                print(f"[START_DETECTION] Loaded notification settings for {username}")
+            else:
+                print(f"[START_DETECTION] No notification settings found for {username}")
+            conn.close()
+        except Exception as e:
+            print(f"[START_DETECTION] Warning: Could not load notification settings: {e}")
+        
         detector.sessions[session_id_str] = {
             "camera": camera_obj,
             "is_detecting": True,
@@ -86,7 +104,7 @@ def start_detection(current_user):
             "last_boxes": [],
             "last_frame_w": 0,
             "last_frame_h": 0,
-            "notification_settings": {"telegram_enabled": True, "email_enabled": True}, 
+            "notification_settings": notification_settings,
             "fire_was_detected": False,
             "frame_counter": 0,
             "owner": username,
