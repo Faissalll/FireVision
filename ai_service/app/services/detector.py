@@ -2,6 +2,7 @@ import cv2
 import os
 import time
 import math
+import uuid
 from datetime import datetime
 from ultralytics import YOLO
 from .telegram_notifier import TelegramNotifier
@@ -10,6 +11,40 @@ from .telegram_notifier import TelegramNotifier
 model = None
 sessions = {}
 last_notification_time = {}
+last_alarm_save_time = {}
+
+def save_alarm_to_db(session_id, session, detections, frame):
+    """Save alarm to database when fire is detected"""
+    try:
+        from ..database import get_db_connection
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        camera_name = session.get("camera_name", "Camera")
+        confidence = detections[0].get("confidence", 0) if detections else 0
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        alarm_uuid = str(uuid.uuid4())
+        
+        c.execute("""
+            INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            alarm_uuid,
+            timestamp,
+            camera_name,
+            "Default Zone",
+            confidence,
+            "active",
+            ""
+        ))
+        
+        conn.commit()
+        conn.close()
+        print(f"💾 Alarm saved to database: {alarm_uuid}")
+        return True
+    except Exception as e:
+        print(f"❌ Error saving alarm to database: {e}")
+        return False
 
 def load_model():
     global model
@@ -171,6 +206,13 @@ def generate_frames(session_id):
                             print(f"📲 Telegram notification sent for session {session_id}")
                         except Exception as e:
                             print(f"❌ Telegram notification failed: {e}")
+                
+                # 💾 Save alarm to database (throttle: 30 seconds)
+                now = time.time()
+                last_saved = last_alarm_save_time.get(session_id, 0)
+                if now - last_saved > 30:
+                    save_alarm_to_db(session_id, session, detections, annotated_frame)
+                    last_alarm_save_time[session_id] = now
             
             # Update Session State (for polling API)
             session["last_boxes"] = detections  # Actually used by /api/detections endpoint?
