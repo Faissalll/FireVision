@@ -81,8 +81,8 @@ def detect_fire(frame, session_data):
     if model is None:
         return frame, False, []
     
-    # Sensitivity Configuration (More Sensitive Default)
-    sensitivity = session_data["settings"].get("sensitivity", 40)
+    # Sensitivity Configuration (Max Sensitivity Default)
+    sensitivity = session_data["settings"].get("sensitivity", 25)
     conf_threshold = sensitivity / 100.0
     
     # Run Inference (imgsz=640 for faster processing)
