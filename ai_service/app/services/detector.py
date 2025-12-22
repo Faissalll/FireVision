@@ -81,13 +81,14 @@ def detect_fire(frame, session_data):
     if model is None:
         return frame, False, []
     
-    sensitivity = session_data["settings"].get("sensitivity", 70)
+    # Sensitivity Configuration (More Sensitive Default)
+    sensitivity = session_data["settings"].get("sensitivity", 40)
     conf_threshold = sensitivity / 100.0
     
     # Run Inference (imgsz=640 for faster processing)
     results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
     
-    fire_detected = False
+    fire_detected_this_frame = False
     detections = []
     
     # Blink Effect State
@@ -110,10 +111,10 @@ def detect_fire(frame, session_data):
             
             # Simple Fire Filter
             if class_name.lower() in ['fire', 'smoke']:
-                fire_detected = True
+                fire_detected_this_frame = True
             
             # Draw Box
-            box_color = (0, 0, 255) if fire_detected else (0, 255, 0)
+            box_color = (0, 0, 255) if fire_detected_this_frame else (0, 255, 0)
             cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
             
             # Draw Label
@@ -128,6 +129,27 @@ def detect_fire(frame, session_data):
                 # Normalized coords for frontend
                 "x": x1, "y": y1, "w": x2-x1, "h": y2-y1 # Raw pixels, frontend will scale or use raw
             })
+
+    # Sensitivity/Persistence Logic
+    consecutive = session_data.get("consecutive_fire_frames", 0)
+    fire_confirmed = session_data.get("fire_confirmed", False)
+
+    if fire_detected_this_frame:
+        consecutive += 1
+    else:
+        consecutive = 0
+    
+    session_data["consecutive_fire_frames"] = consecutive
+    
+    # 5 Frames thresholds
+    if consecutive >= 5:
+        fire_confirmed = True
+    elif consecutive == 0:
+        fire_confirmed = False
+        
+    session_data["fire_confirmed"] = fire_confirmed
+
+    return frame, fire_confirmed, detections
             
     # Timestamp
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

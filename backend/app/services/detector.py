@@ -41,18 +41,16 @@ def detect_fire(frame, session_data):
     if model is None:
         return frame, False, []
     
-    sensitivity = session_data["settings"].get("sensitivity", 60)
+    # Sensitivity Configuration (More Sensitive Default)
+    sensitivity = session_data["settings"].get("sensitivity", 40)
     conf_threshold = sensitivity / 100.0
     
     results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
     
-    fire_detected = False
+    fire_detected_this_frame = False
     detections = []
     
     frame_counter = session_data["frame_counter"]
-    blink_speed = 2
-    alpha = (math.sin(frame_counter * blink_speed * 0.1) + 1) / 2
-    alpha = 0.5 + (alpha * 0.5)
     session_data["frame_counter"] += 1
     
     for result in results:
@@ -69,10 +67,10 @@ def detect_fire(frame, session_data):
             else:
                 class_name = str(class_id)
             
-            fire_detected = True
-            box_color = (0, 0, 255)  
+            fire_detected_this_frame = True
             
-            cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
+            # Visuals: Simple Red Box
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
             
             label = f"{class_name}: {confidence:.1%}"
             cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 
@@ -83,6 +81,25 @@ def detect_fire(frame, session_data):
                 "confidence": confidence,
                 "bbox": [x1, y1, x2, y2],
             })
+
+    # Sensitivity/Persistence Logic
+    consecutive = session_data.get("consecutive_fire_frames", 0)
+    fire_confirmed = session_data.get("fire_confirmed", False)
+
+    if fire_detected_this_frame:
+        consecutive += 1
+    else:
+        consecutive = 0
+    
+    session_data["consecutive_fire_frames"] = consecutive
+    
+    # 5 Frames thresholds
+    if consecutive >= 5:
+        fire_confirmed = True
+    elif consecutive == 0:
+        fire_confirmed = False
+        
+    session_data["fire_confirmed"] = fire_confirmed
             
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cv2.putText(frame, timestamp, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
