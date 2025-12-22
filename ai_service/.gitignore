@@ -1,6 +1,6 @@
-# Exclude large model files (only keep best (17).pt)
+# Exclude large model files (only keep best (13) and (17))
 best (11).pt
-best (13).pt
+# best (13).pt
 best (2).pt
 
 # Python
