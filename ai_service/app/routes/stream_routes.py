@@ -18,9 +18,10 @@ def start_detection(current_user):
         
         if detector.model is None:
             print("[START_DETECTION] Loading YOLO model...")
-            if not detector.load_model():
-                print("[START_DETECTION] ERROR: Failed to load model")
-                return jsonify({'error': 'Failed to load model best.pt'}), 500
+            success, msg = detector.load_model()
+            if not success:
+                print(f"[START_DETECTION] ERROR: {msg}")
+                return jsonify({'error': f'Model Load Failed: {msg}'}), 500
         
         data = request.get_json() or {}
         username = current_user
@@ -63,11 +64,20 @@ def start_detection(current_user):
             # Webcam with DirectShow for faster capture on Windows
             try:
                 cam_idx = int(data.get('camera_index', 0))
-                print(f"[START_DETECTION] Opening webcam index: {cam_idx} with DirectShow")
-                camera_obj = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
+                
+                if os.name == 'nt':
+                    print(f"[START_DETECTION] Opening webcam index: {cam_idx} with DirectShow")
+                    camera_obj = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
+                else:
+                    print(f"[START_DETECTION] Opening webcam index: {cam_idx}")
+                    camera_obj = cv2.VideoCapture(cam_idx)
+
                 if not camera_obj.isOpened():
-                    print("[START_DETECTION] DirectShow failed, trying default...")
-                    camera_obj = cv2.VideoCapture(0)
+                    print("[START_DETECTION] Primary open failed, trying fallback 0...")
+                    if os.name == 'nt':
+                        camera_obj = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+                    else:
+                        camera_obj = cv2.VideoCapture(0)
             except Exception as e:
                 print(f"[START_DETECTION] Error opening webcam: {e}")
                 return jsonify({'error': f'Failed to open webcam: {str(e)}'}), 500

@@ -48,32 +48,30 @@ def save_alarm_to_db(session_id, session, detections, frame):
 
 def load_model():
     global model
-    # Model is expected to be in the root of the service (Docker /app)
-    # This file is in app/services/detector.py
-    # So we go up 3 levels: services -> app -> ai_service(root)
+    # Model is expected to be in the root of the service
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) 
     
     # Check for likely model names
     possible_names = ['best (13).pt', 'best (17).pt', 'best.pt', 'yolov8n.pt']
-    model_path = None
+    
+    debug_log = f"Base: {base_dir} | "
     
     for name in possible_names:
-        p = os.path.join(base_dir, name)
-        if os.path.exists(p):
-            model_path = p
-            break
-            
-    if not model_path:
-        print(f"❌ Error: No validation model found in {base_dir}")
-        return False
-    
-    try:
-        model = YOLO(model_path)
-        print(f"✅ Model loaded successfully from {model_path}")
-        return True
-    except Exception as e:
-        print(f"❌ Error loading model: {e}")
-        return False
+        model_path = os.path.join(base_dir, name)
+        debug_log += f"Checking {name}: "
+        
+        if os.path.exists(model_path):
+            try:
+                model = YOLO(model_path)
+                return True, f"Loaded {name}"
+            except Exception as e:
+                debug_log += f"Exception ({str(e)}); "
+                import traceback
+                traceback.print_exc()
+        else:
+            debug_log += "Not Found; "
+
+    return False, f"Failed. Log: {debug_log}"
 
 def detect_fire(frame, session_data):
     global model
@@ -81,15 +79,18 @@ def detect_fire(frame, session_data):
     if model is None:
         return frame, False, []
     
-    # Sensitivity Configuration (Max Sensitivity Default)
+    # Sensitivity Configuration (Matched to User Script)
     sensitivity = session_data["settings"].get("sensitivity", 25)
     conf_threshold = sensitivity / 100.0
     
-    # Run Inference (imgsz=1280 for max detail)
-    results = model(frame, imgsz=1280, conf=conf_threshold, verbose=False)
+    # Run Inference (imgsz=640 matches training/local script)
+    results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
     
     fire_detected_this_frame = False
     detections = []
+    
+    # DEBUG: Track max confidence
+    max_conf_debug = 0.0
     
     # Blink Effect State
     frame_counter = session_data.get("frame_counter", 0)
@@ -102,6 +103,8 @@ def detect_fire(frame, session_data):
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
             
             confidence = float(box.conf[0])
+            if confidence > max_conf_debug: max_conf_debug = confidence
+            
             class_id = int(box.cls[0])
             
             if hasattr(model, "names"):
@@ -132,8 +135,7 @@ def detect_fire(frame, session_data):
 
     # Sensitivity/Persistence Logic
     consecutive = session_data.get("consecutive_fire_frames", 0)
-    fire_confirmed = session_data.get("fire_confirmed", False)
-
+    
     if fire_detected_this_frame:
         consecutive += 1
     else:
@@ -141,33 +143,73 @@ def detect_fire(frame, session_data):
     
     session_data["consecutive_fire_frames"] = consecutive
     
-    # 5 Frames thresholds
-    if consecutive >= 5:
-        fire_confirmed = True
+    # Reduced from 2 to 1 frame for INSTANT reaction (User Request)
+    if consecutive >= 1:
+        session_data["fire_confirmed"] = True
     elif consecutive == 0:
-        fire_confirmed = False
+        session_data["fire_confirmed"] = False
         
-    session_data["fire_confirmed"] = fire_confirmed
+    fire_confirmed = session_data.get("fire_confirmed", False)
+    
+    # --- RESTORED ALARM & NOTIFICATION LOGIC ---
+    current_time = time.time()
+    
+    # 1. Telegram Notification (Rate Limited: 60s)
+    if fire_confirmed:
+        last_notif = last_notification_time.get(session_data.get('id', 'default'), 0)
+        time_since = current_time - last_notif
+        print(f"🔥 FIRE DETECTED! Time since last notif: {time_since:.1f}s")
+        
+        if time_since > 60:
+            print(f"🔔 TRIGGERING TELEGRAM ALERT for Session {session_data.get('id')}...")
+            # Run in background to not block frame
+            import threading
+            try:
+                threading.Thread(target=TelegramNotifier.send_fire_alert, 
+                               args=(frame.copy(), session_data.get("camera_name", "Camera"))).start()
+                last_notification_time[session_data.get('id', 'default')] = current_time
+                print("✅ Telegram Thread Started")
+            except Exception as e:
+                print(f"❌ Failed to start Telegram thread: {e}")
 
-    return frame, fire_confirmed, detections
-            
-    # Timestamp
+    # 2. Save to Database (Rate Limited: 10s)
+    if fire_confirmed:
+        last_save = last_alarm_save_time.get(session_data.get('id', 'default'), 0)
+        if current_time - last_save > 10:
+            print("💾 Attempting to save alarm to DB...")
+            saved = save_alarm_to_db(session_data.get('id'), session_data, detections, frame)
+            if saved:
+                print("✅ Alarm Saved to DB")
+                last_alarm_save_time[session_data.get('id', 'default')] = current_time
+            else:
+                print("❌ Failed to save alarm to DB")
+
+    # 3. Status Bar Overlay & Timestamp
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cv2.putText(frame, timestamp, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
                 0.7, (255, 255, 255), 2, cv2.LINE_AA)
     
-    # Status Bar
-    status_text = (
-        f'🔥 FIRE DETECTED! ({len(detections)})' if fire_detected 
-        else '✓ System Active'
-    )
-    status_color = (0, 0, 255) if fire_detected else (0, 255, 0)
-    
-    cv2.rectangle(frame, (5, 45), (350, 75), status_color, -1)
-    cv2.putText(frame, status_text, (10, 68), cv2.FONT_HERSHEY_SIMPLEX, 
-                0.7, (255, 255, 255), 2, cv2.LINE_AA)
-    
-    return frame, fire_detected, detections
+    if fire_confirmed:
+        status_text = "FIRE DETECTED!"
+        status_color = (0, 0, 255) # Red
+        
+        # Flashing Border
+        if (frame_counter // 5) % 2 == 0:
+             cv2.rectangle(frame, (0, 0), (frame.shape[1], frame.shape[0]), (0, 0, 255), 10)
+    else:
+        status_text = "Monitoring..."
+        status_color = (0, 255, 0) # Green
+        
+    cv2.putText(frame, status_text, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 
+                1.0, status_color, 2, cv2.LINE_AA)
+
+    # DEBUG OVERLAY
+    debug_color = (0, 255, 255)
+    debug_text = f"MAX CONF: {max_conf_debug:.2f} (Thresh: {conf_threshold:.2f})"
+    cv2.putText(frame, debug_text, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 
+                0.7, debug_color, 2, cv2.LINE_AA)
+
+    return frame, fire_confirmed, detections
 
 def generate_frames(session_id):
     global sessions
