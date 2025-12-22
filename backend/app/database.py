@@ -49,7 +49,8 @@ def init_db():
                 c.execute("ALTER TABLE alarms ADD COLUMN status VARCHAR(50) DEFAULT 'Unverified'")
                 conn.commit()
         except Exception as e:
-            print(f"Migration warning: {e}")
+            # Catch ALL migration errors to prevent app crash (502)
+            print(f"Migration warning detected (Non-fatal): {e}")
         
         # Table Users
         c.execute('''
