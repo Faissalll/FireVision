@@ -60,13 +60,13 @@ def start_detection(current_user):
                 print(f"[START_DETECTION] Error opening IP cam: {e}")
                 return jsonify({'error': f'Failed to open IP camera: {str(e)}'}), 500
         else:
-            # Webcam - will likely fail on cloud
+            # Webcam with DirectShow for faster capture on Windows
             try:
                 cam_idx = int(data.get('camera_index', 0))
-                print(f"[START_DETECTION] Opening webcam index: {cam_idx}")
-                camera_obj = cv2.VideoCapture(cam_idx)
+                print(f"[START_DETECTION] Opening webcam index: {cam_idx} with DirectShow")
+                camera_obj = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
                 if not camera_obj.isOpened():
-                    print("[START_DETECTION] Webcam 0 failed, trying default...")
+                    print("[START_DETECTION] DirectShow failed, trying default...")
                     camera_obj = cv2.VideoCapture(0)
             except Exception as e:
                 print(f"[START_DETECTION] Error opening webcam: {e}")
@@ -79,6 +79,24 @@ def start_detection(current_user):
 
         # Start Session
         session_id_str = str(uuid.uuid4())
+        
+        # Load notification settings from database
+        notification_settings = {"telegram_enabled": False, "email_enabled": False}
+        try:
+            from ..database import get_db_connection
+            conn = get_db_connection()
+            c = conn.cursor(dictionary=True)
+            c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+            db_settings = c.fetchone()
+            if db_settings:
+                notification_settings = db_settings
+                print(f"[START_DETECTION] Loaded notification settings for {username}")
+            else:
+                print(f"[START_DETECTION] No notification settings found for {username}")
+            conn.close()
+        except Exception as e:
+            print(f"[START_DETECTION] Warning: Could not load notification settings: {e}")
+        
         detector.sessions[session_id_str] = {
             "camera": camera_obj,
             "is_detecting": True,
@@ -86,7 +104,7 @@ def start_detection(current_user):
             "last_boxes": [],
             "last_frame_w": 0,
             "last_frame_h": 0,
-            "notification_settings": {"telegram_enabled": True, "email_enabled": True}, 
+            "notification_settings": notification_settings,
             "fire_was_detected": False,
             "frame_counter": 0,
             "owner": username,
@@ -142,83 +160,120 @@ def video_feed():
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
-@stream_bp.route('/process-frame', methods=['POST'])
-@token_required
-def process_frame(current_user):
-    """
-    Process a single frame from browser webcam.
-    Accepts: multipart/form-data with 'frame' file or JSON with 'frame' as base64
-    Returns: JSON with detections
-    """
+@stream_bp.route('/process-frame', methods=['POST', 'OPTIONS'])
+def process_frame():
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     try:
+        data = request.get_json()
+        if not data or 'frame' not in data:
+            return jsonify({'error': 'No frame data provided'}), 400
+        
+        frame_data = data['frame']
+        sensitivity = data.get('sensitivity', 70)
+        username = data.get('username', 'admin')
+        
         import base64
         import numpy as np
+        import time
+        from datetime import datetime
         
-        # Load model if not loaded
+        if ',' in frame_data:
+            frame_data = frame_data.split(',')[1]
+        
+        img_bytes = base64.b64decode(frame_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return jsonify({'error': 'Failed to decode frame'}), 400
+        
         if detector.model is None:
-            print("[PROCESS_FRAME] Loading YOLO model...")
             if not detector.load_model():
                 return jsonify({'error': 'Failed to load model'}), 500
         
-        frame = None
-        sensitivity = 70
+        session_data = {
+            "settings": {"sensitivity": sensitivity},
+            "frame_counter": 0
+        }
         
-        # Try to get frame from form data (file upload)
-        if 'frame' in request.files:
-            file = request.files['frame']
-            file_bytes = np.frombuffer(file.read(), np.uint8)
-            frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-            sensitivity = int(request.form.get('sensitivity', 70))
+        from ..services.detector import detect_fire
+        annotated_frame, fire_detected, detections = detect_fire(frame, session_data)
         
-        # Try to get frame from JSON (base64)
-        elif request.is_json:
-            data = request.get_json()
-            if 'frame' in data:
-                # Remove data URL prefix if present
-                frame_data = data['frame']
-                if ',' in frame_data:
-                    frame_data = frame_data.split(',')[1]
+        # 🔔 Send Telegram Notification if fire detected
+        if fire_detected:
+            try:
+                from ..database import get_db_connection
+                from ..services.telegram_notifier import TelegramNotifier
                 
-                frame_bytes = base64.b64decode(frame_data)
-                nparr = np.frombuffer(frame_bytes, np.uint8)
-                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                sensitivity = int(data.get('sensitivity', 70))
-        
-        if frame is None:
-            return jsonify({'error': 'No frame provided'}), 400
-        
-        # Run detection
-        conf_threshold = sensitivity / 100.0
-        results = detector.model(frame, conf=conf_threshold, verbose=False)
-        
-        detections = []
-        fire_detected = False
-        
-        for result in results:
-            boxes = result.boxes
-            for box in boxes:
-                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                conn = get_db_connection()
+                c = conn.cursor(dictionary=True)
+                c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+                notif_settings = c.fetchone()
+                conn.close()
                 
-                confidence = float(box.conf[0])
-                class_id = int(box.cls[0])
+                if notif_settings and notif_settings.get('telegram_enabled'):
+                    bot_token = notif_settings.get('telegram_bot_token', '')
+                    chat_id = notif_settings.get('telegram_chat_id', '')
+                    
+                    if bot_token and chat_id:
+                        # Throttle using global dict
+                        if not hasattr(process_frame, 'last_notify_time'):
+                            process_frame.last_notify_time = 0
+                        
+                        now = time.time()
+                        if now - process_frame.last_notify_time > 10:
+                            notifier = TelegramNotifier(bot_token, chat_id)
+                            confidence = detections[0].get("confidence", 0) * 100 if detections else 0
+                            message = (
+                                f"🔥 *PERINGATAN KEBAKARAN!*\n\n"
+                                f"📍 Kamera: Browser Webcam\n"
+                                f"⏰ Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                                f"📊 Confidence: {confidence:.1f}%\n\n"
+                                f"Segera lakukan tindakan!"
+                            )
+                            notifier.send_photo_from_cv2(annotated_frame, caption=message)
+                            process_frame.last_notify_time = now
+                            print(f"📲 Telegram notification sent for process-frame")
+            except Exception as e:
+                print(f"❌ Telegram notification error in process-frame: {e}")
+            
+            # 💾 Save alarm to database (throttle: 30 seconds)
+            try:
+                import uuid as uuid_module
+                if not hasattr(process_frame, 'last_alarm_save_time'):
+                    process_frame.last_alarm_save_time = 0
                 
-                if hasattr(detector.model, "names"):
-                    class_name = detector.model.names[class_id]
-                else:
-                    class_name = str(class_id)
-                
-                if class_name.lower() in ['fire', 'smoke']:
-                    fire_detected = True
-                
-                detections.append({
-                    "class": class_name,
-                    "confidence": confidence,
-                    "x": x1,
-                    "y": y1,
-                    "w": x2 - x1,
-                    "h": y2 - y1
-                })
+                now = time.time()
+                if now - process_frame.last_alarm_save_time > 30:
+                    from ..database import get_db_connection
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    
+                    confidence = detections[0].get("confidence", 0) if detections else 0
+                    alarm_uuid = str(uuid_module.uuid4())
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    c.execute("""
+                        INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        alarm_uuid,
+                        timestamp,
+                        "Browser Webcam",
+                        "Default Zone",
+                        confidence,
+                        "active",
+                        ""
+                    ))
+                    
+                    conn.commit()
+                    conn.close()
+                    process_frame.last_alarm_save_time = now
+                    print(f"💾 Alarm saved to database: {alarm_uuid}")
+            except Exception as e:
+                print(f"❌ Error saving alarm in process-frame: {e}")
         
         return jsonify({
             'success': True,
@@ -229,5 +284,6 @@ def process_frame(current_user):
         })
         
     except Exception as e:
-        print(f"[PROCESS_FRAME] ERROR: {e}")
+        print(f"[PROCESS_FRAME] Error: {e}")
         return jsonify({'error': str(e)}), 500
+
