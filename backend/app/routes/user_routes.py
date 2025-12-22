@@ -191,7 +191,7 @@ def get_history():
                 "camera": row['camera_id'],
                 "zone": row['zone'],
                 "confidence": row['confidence'],
-                "status": row['status'],
+                "status": row.get('status', 'Unverified'),
                 "image": row.get('image_path', '')
             })
         

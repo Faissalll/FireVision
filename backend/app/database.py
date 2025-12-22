@@ -39,6 +39,17 @@ def init_db():
                 image_path TEXT
             )
         ''')
+
+        # Simple Migration: Check if status column exists in alarms, if not add it
+        try:
+            c.execute("SHOW COLUMNS FROM alarms LIKE 'status'")
+            result = c.fetchone()
+            if not result:
+                print("Migrating: Adding 'status' column to alarms table")
+                c.execute("ALTER TABLE alarms ADD COLUMN status VARCHAR(50) DEFAULT 'Unverified'")
+                conn.commit()
+        except Exception as e:
+            print(f"Migration warning: {e}")
         
         # Table Users
         c.execute('''
