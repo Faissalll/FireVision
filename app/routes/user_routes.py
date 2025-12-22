@@ -194,32 +194,9 @@ def get_history():
                 "status": row['status'],
                 "image": row.get('image_path', '')
             })
-        
-        conn.close()
-        return jsonify(history)
             
     except Exception as e:
         print(f"Error history: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@user_bp.route('/history/update-status', methods=['POST'])
-def update_history_status():
-    data = request.get_json()
-    db_id = data.get('db_id')
-    new_status = data.get('status')
-    
-    if not db_id or not new_status:
-        return jsonify({'error': 'Missing db_id or status'}), 400
-        
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("UPDATE alarms SET status = %s WHERE id = %s", (new_status, db_id))
-        conn.commit()
-        conn.close()
-        return jsonify({'status': 'success', 'message': 'Status updated'})
-    except Exception as e:
-        print(f"Error update history: {e}")
         return jsonify({'error': str(e)}), 500
 
 @user_bp.route('/telegram/get-chat-id', methods=['POST'])
