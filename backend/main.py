@@ -4,4 +4,5 @@ app = create_app()
 
 if __name__ == '__main__':
     # Threaded=True is important for Streaming + API concurency
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # Debug should be False in production
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
