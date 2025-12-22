@@ -158,7 +158,7 @@ const isActive = (path) => {
                         viewBox="0 0 24 24"
                     >
                         <path
-                            v-if="!isMenuOpen"
+                            v-if="!isMobileMenuOpen"
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
@@ -177,7 +177,7 @@ const isActive = (path) => {
 
             <!-- Mobile Menu -->
             <div
-                v-show="isMenuOpen"
+                v-show="isMobileMenuOpen"
                 class="md:hidden pb-4 space-y-2 border-t border-gray-800 pt-4"
             >
                 <button

@@ -41,10 +41,10 @@ def detect_fire(frame, session_data):
     if model is None:
         return frame, False, []
     
-    sensitivity = session_data["settings"].get("sensitivity", 70)
+    sensitivity = session_data["settings"].get("sensitivity", 60)
     conf_threshold = sensitivity / 100.0
     
-    results = model(frame, conf=conf_threshold, verbose=False)
+    results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
     
     fire_detected = False
     detections = []

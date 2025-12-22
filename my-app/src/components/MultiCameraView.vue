@@ -384,10 +384,19 @@ const stopAll = () => {
 
 // Check if ANY camera has detections to play sound
 // Check if ANY camera has detections to play sound and notify
+// Check if ANY camera has detections to play sound and notify
+// Uses timestamp persistence to prevent audio stuttering
 const checkAlarmStatus = () => {
     const anyFireCamera = allCameras.value.find(cam => cam.isRunning && cam.detections.length > 0);
+    const now = Date.now();
     
+    // Initialize lastFireTime if not exists
+    if (!checkAlarmStatus.lastFireTime) checkAlarmStatus.lastFireTime = 0;
+
     if (anyFireCamera) {
+        // Update last time fire was seen
+        checkAlarmStatus.lastFireTime = now;
+
         // Audio
         if (enableSound.value) {
             if (alarmAudio.paused) {
@@ -404,7 +413,6 @@ const checkAlarmStatus = () => {
         
         // Browser Notification
         if (enablePopup.value && "Notification" in window && Notification.permission === "granted") {
-            const now = Date.now();
             if (!checkAlarmStatus.lastNotify || now - checkAlarmStatus.lastNotify > 5000) {
                 new Notification("🔥 PERINGATAN API!", {
                     body: `Api terdeteksi di ${anyFireCamera.name || 'Kamera ' + anyFireCamera.id}! Segera periksa!`,
@@ -414,9 +422,13 @@ const checkAlarmStatus = () => {
             }
         }
     } else {
-        if (!alarmAudio.paused) {
-            alarmAudio.pause();
-            alarmAudio.currentTime = 0;
+        // No fire currently detected
+        // Only stop audio if fire has been lost for > 3 seconds (3000ms)
+        if (now - checkAlarmStatus.lastFireTime > 3000) {
+            if (!alarmAudio.paused) {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+            }
         }
     }
 };

@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onUnmounted, nextTick, onMounted, watch } from "vue";
 import FireDemoImage from "../assets/FireDemo.jpg";
-import alarmSound from "../assets/alarm.mp3";
+// import alarmSound from "../assets/alarm.mp3"; // Use static public file instead
+const alarmSound = "/alarm.mp3";
 import { auth } from "../store/auth";
 
 const detectionSmoothing = ref(false);
@@ -258,12 +259,18 @@ async function startPollingDetections(activeSessionId) {
             });
 
             // 🔹 Audio Alarm Logic
+            // console.log("[DEBUG] Polling boxes:", boxes.length, "Audio enabled:", enableSound.value); // Commented out to avoid spam, uncomment if needed
             if (boxes.length > 0) {
                 if (enableSound.value) {
                     if (alarmAudio.paused) {
+                        console.log("[DEBUG] Attempting to play alarm audio...");
                         alarmAudio.volume = volumeAlarm.value / 100;
-                        alarmAudio.play().catch((err) => console.warn("Audio play blocked:", err));
+                        alarmAudio.play()
+                            .then(() => console.log("[DEBUG] Audio playing successfully"))
+                            .catch((err) => console.warn("[DEBUG] Audio play blocked/failed:", err));
                     }
+                } else {
+                     console.log("[DEBUG] Audio disabled by user setting");
                 }
 
                 // 🔹 Browser Notification (Throttled 5s)
@@ -311,11 +318,9 @@ function stopPollingDetections() {
 }
 
 const playDemo = async () => {
-    console.log("[playDemo] cameraSource.value =", cameraSource.value);
-    
     // Route to browser webcam mode if WEBCAM selected
     if (cameraSource.value === 'WEBCAM') {
-        console.log("[playDemo] Using browser webcam mode");
+        console.log("[DEBUG] Routing to startBrowserWebcam...");
         if (isDetecting.value) {
             stopBrowserWebcam();
         } else {
@@ -505,8 +510,19 @@ const checkBackendConnection = async () => {
     }
 };
 
+
+const testAudio = () => {
+    console.log("[DEBUG] Testing Audio Button Clicked");
+    const audio = new Audio(alarmSound);
+    audio.volume = 1.0;
+    audio.play()
+        .then(() => alert("Suara berhasil diputar! Apakah Anda mendengarnya?"))
+        .catch(e => alert("Gagal memutar suara: " + e.message));
+};
+
 // ========== BROWSER WEBCAM MODE FUNCTIONS ==========
 const startBrowserWebcam = async () => {
+
     if (isDetecting.value) {
         stopBrowserWebcam();
         return;
@@ -571,7 +587,8 @@ const startBrowserWebcam = async () => {
 const stopBrowserWebcam = () => {
     // Stop frame loop
     if (webcamFrameLoopId.value) {
-        cancelAnimationFrame(webcamFrameLoopId.value);
+        clearTimeout(webcamFrameLoopId.value);
+        cancelAnimationFrame(webcamFrameLoopId.value); // Just in case it was a frame ID
         webcamFrameLoopId.value = null;
     }
     
@@ -654,7 +671,7 @@ const processWebcamFrame = async () => {
         const data = await response.json();
         
         // Debug log
-        console.log("[WEBCAM] API Response:", data);
+        // console.log("[WEBCAM] API Response:", data);
         
         if (data.success) {
             // Update detections for overlay
@@ -665,31 +682,48 @@ const processWebcamFrame = async () => {
                 style: boxToStyle(d, { w: data.frame_width, h: data.frame_height })
             }));
             
-            console.log("[WEBCAM] Mapped detections:", mappedDetections);
+            // console.log("[WEBCAM] Mapped detections:", mappedDetections);
             detections.value = mappedDetections;
-            
+
+            // Handle fire detection alarm
             // Handle fire detection alarm
             if (data.fire_detected) {
-                if (enableSound.value && alarmAudio.paused) {
-                    alarmAudio.volume = volumeAlarm.value / 100;
-                    alarmAudio.play().catch(e => console.warn("Audio:", e));
+                // Reset loss counter if fire detected
+                processWebcamFrame.fireLossCount = 0;
+                
+                if (enableSound.value) {
+                     if (alarmAudio.paused) {
+                        try {
+                             alarmAudio.volume = volumeAlarm.value / 100;
+                             await alarmAudio.play();
+                        } catch (e) {
+                             console.error("Audio error:", e);
+                        }
+                     }
                 }
                 
-                // Browser notification (throttled)
+                // Browser notification logic...
                 if (enablePopup.value && "Notification" in window && Notification.permission === "granted") {
                     const now = Date.now();
                     if (!processWebcamFrame.lastNotify || now - processWebcamFrame.lastNotify > 5000) {
                         new Notification("PERINGATAN API!", {
-                            body: "Api terdeteksi! Segera tindak lanjuti.",
+                            body: "Api terdeteksi!",
                             icon: "/favicon.ico"
                         });
                         processWebcamFrame.lastNotify = now;
                     }
                 }
             } else {
-                if (!alarmAudio.paused) {
-                    alarmAudio.pause();
-                    alarmAudio.currentTime = 0;
+                // Increment loss counter
+                processWebcamFrame.fireLossCount = (processWebcamFrame.fireLossCount || 0) + 1;
+                
+                // Only stop audio if fire lost for 30 consecutive frames (~3 seconds)
+                if (processWebcamFrame.fireLossCount > 30) {
+                    if (!alarmAudio.paused) {
+                        alarmAudio.pause();
+                        alarmAudio.currentTime = 0;
+                        console.log("Audio stopped after persistent fire loss");
+                    }
                 }
             }
         }
@@ -940,6 +974,8 @@ onMounted(async () => {
                 Rasakan deteksi api real-time yang didukung oleh AI
             </p>
 
+            <!-- Debug Button Removed -->
+
             <div v-if="errorMessage" class="error-banner">
                 <span>{{ errorMessage }}</span>
                 <button class="error-close" @click="errorMessage = ''">
@@ -1047,6 +1083,7 @@ onMounted(async () => {
                             <span class="badge-dot"></span>
                             <span>Deteksi Langsung Aktif</span>
                         </div>
+                        <!-- VISUAL DEBUG OVERLAY REMOVED -->
                     </div>
 
                     <div v-if="isDetecting" class="video-stats">
