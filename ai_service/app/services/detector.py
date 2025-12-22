@@ -54,7 +54,7 @@ def load_model():
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) 
     
     # Check for likely model names
-    possible_names = ['best (17).pt', 'best.pt', 'yolov8n.pt']
+    possible_names = ['best (13).pt', 'best (17).pt', 'best.pt', 'yolov8n.pt']
     model_path = None
     
     for name in possible_names:

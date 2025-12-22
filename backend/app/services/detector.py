@@ -21,7 +21,7 @@ def load_model():
     # Model is at: ../../best (17).pt
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) # backend/
-    model_path = os.path.join(base_dir, 'best (17).pt')
+    model_path = os.path.join(base_dir, 'best (13).pt')
     
     if not os.path.exists(model_path):
         print(f"Error: Model file not found at {model_path}")
