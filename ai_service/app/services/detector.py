@@ -84,8 +84,8 @@ def detect_fire(frame, session_data):
     sensitivity = session_data["settings"].get("sensitivity", 70)
     conf_threshold = sensitivity / 100.0
     
-    # Run Inference
-    results = model(frame, conf=conf_threshold, verbose=False)
+    # Run Inference (imgsz=640 for faster processing)
+    results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
     
     fire_detected = False
     detections = []
@@ -172,7 +172,7 @@ def generate_frames(session_id):
                 continue
                 
             # If frame too big, resize for performance?
-            # frame = cv2.resize(frame, (640, 480))
+            #frame = cv2.resize(frame, (640, 480))
 
             # Detect
             annotated_frame, fire_detected, detections = detect_fire(frame, session)

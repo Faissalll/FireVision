@@ -60,13 +60,13 @@ def start_detection(current_user):
                 print(f"[START_DETECTION] Error opening IP cam: {e}")
                 return jsonify({'error': f'Failed to open IP camera: {str(e)}'}), 500
         else:
-            # Webcam - will likely fail on cloud
+            # Webcam with DirectShow for faster capture on Windows
             try:
                 cam_idx = int(data.get('camera_index', 0))
-                print(f"[START_DETECTION] Opening webcam index: {cam_idx}")
-                camera_obj = cv2.VideoCapture(cam_idx)
+                print(f"[START_DETECTION] Opening webcam index: {cam_idx} with DirectShow")
+                camera_obj = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
                 if not camera_obj.isOpened():
-                    print("[START_DETECTION] Webcam 0 failed, trying default...")
+                    print("[START_DETECTION] DirectShow failed, trying default...")
                     camera_obj = cv2.VideoCapture(0)
             except Exception as e:
                 print(f"[START_DETECTION] Error opening webcam: {e}")
@@ -172,9 +172,12 @@ def process_frame():
         
         frame_data = data['frame']
         sensitivity = data.get('sensitivity', 70)
+        username = data.get('username', 'admin')
         
         import base64
         import numpy as np
+        import time
+        from datetime import datetime
         
         if ',' in frame_data:
             frame_data = frame_data.split(',')[1]
@@ -198,6 +201,44 @@ def process_frame():
         from ..services.detector import detect_fire
         annotated_frame, fire_detected, detections = detect_fire(frame, session_data)
         
+        # 🔔 Send Telegram Notification if fire detected
+        if fire_detected:
+            try:
+                from ..database import get_db_connection
+                from ..services.telegram_notifier import TelegramNotifier
+                
+                conn = get_db_connection()
+                c = conn.cursor(dictionary=True)
+                c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+                notif_settings = c.fetchone()
+                conn.close()
+                
+                if notif_settings and notif_settings.get('telegram_enabled'):
+                    bot_token = notif_settings.get('telegram_bot_token', '')
+                    chat_id = notif_settings.get('telegram_chat_id', '')
+                    
+                    if bot_token and chat_id:
+                        # Throttle using global dict
+                        if not hasattr(process_frame, 'last_notify_time'):
+                            process_frame.last_notify_time = 0
+                        
+                        now = time.time()
+                        if now - process_frame.last_notify_time > 10:
+                            notifier = TelegramNotifier(bot_token, chat_id)
+                            confidence = detections[0].get("confidence", 0) * 100 if detections else 0
+                            message = (
+                                f"🔥 *PERINGATAN KEBAKARAN!*\n\n"
+                                f"📍 Kamera: Browser Webcam\n"
+                                f"⏰ Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                                f"📊 Confidence: {confidence:.1f}%\n\n"
+                                f"Segera lakukan tindakan!"
+                            )
+                            notifier.send_photo_from_cv2(annotated_frame, caption=message)
+                            process_frame.last_notify_time = now
+                            print(f"📲 Telegram notification sent for process-frame")
+            except Exception as e:
+                print(f"❌ Telegram notification error in process-frame: {e}")
+        
         return jsonify({
             'success': True,
             'fire_detected': fire_detected,
@@ -209,3 +250,4 @@ def process_frame():
     except Exception as e:
         print(f"[PROCESS_FRAME] Error: {e}")
         return jsonify({'error': str(e)}), 500
+
