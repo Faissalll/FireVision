@@ -19,7 +19,11 @@ const itemsPerPage = 8;
 const fetchHistory = async () => {
     try {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/history`);
-        if (!response.ok) throw new Error("Gagal mengambil data");
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error("Backend Error Detail:", errBody);
+            throw new Error(`Gagal mengambil data: ${response.status} ${response.statusText}`);
+        }
         const data = await response.json();
         historyData.value = data;
         isLoading.value = false;
