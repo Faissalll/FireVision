@@ -85,8 +85,8 @@ def detect_fire(frame, session_data):
     sensitivity = session_data["settings"].get("sensitivity", 25)
     conf_threshold = sensitivity / 100.0
     
-    # Run Inference (imgsz=640 for faster processing)
-    results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
+    # Run Inference (imgsz=1280 for max detail)
+    results = model(frame, imgsz=1280, conf=conf_threshold, verbose=False)
     
     fire_detected_this_frame = False
     detections = []

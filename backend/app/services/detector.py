@@ -45,7 +45,8 @@ def detect_fire(frame, session_data):
     sensitivity = session_data["settings"].get("sensitivity", 25)
     conf_threshold = sensitivity / 100.0
     
-    results = model(frame, imgsz=640, conf=conf_threshold, verbose=False)
+    # Run Inference on High Res (1280) for small fire detection
+    results = model(frame, imgsz=1280, conf=conf_threshold, verbose=False)
     
     fire_detected_this_frame = False
     detections = []
@@ -146,11 +147,12 @@ def generate_frames(session_id):
             continue
 
         try:
-            # frame = cv2.resize(frame, (640, 480)) # DISABLED: distort aspect ratio. Detect on raw frame.
+            # 1. Do NOT resize before detection (Use Raw Frame)
+            # frame = cv2.resize(frame, (640, 480)) 
 
             processed_frame, fire_detected, detections = detect_fire(frame, session)
 
-            # Resize output for streaming bandwidth (640x480)
+            # 2. Resize ONLY for viewing/streaming bandwidth
             processed_frame = cv2.resize(processed_frame, (640, 480))
 
             h, w = processed_frame.shape[:2]
