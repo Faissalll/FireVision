@@ -1,4 +1,4 @@
-F# Force Rebuild 2025-12-22
+# Force Rebuild 2025-12-22
 Flask==3.0.0
 flask-cors==4.0.0
 opencv-python-headless==4.10.0.84
@@ -7,5 +7,6 @@ ultralytics==8.3.0
 torch>=2.0.0
 torchvision>=0.15.0
 python-dotenv
-python-dotenv
 PyJWT==2.8.0
+mysql-connector-python
+requests
