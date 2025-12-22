@@ -149,6 +149,26 @@ def stop_detection(current_user):
         else:
             return jsonify({'status': 'ignored_missing_session_id'}), 200
 
+@stream_bp.route('/detections', methods=['GET'])
+def get_detections():
+    session_id = request.args.get('session')
+    if not session_id:
+        return jsonify({'error': 'Missing session parameter'}), 400
+    
+    if session_id not in detector.sessions:
+        return jsonify({'boxes': [], 'frame_w': 0, 'frame_h': 0})
+    
+    session = detector.sessions[session_id]
+    boxes = session.get('last_boxes', [])
+    frame_w = session.get('last_frame_w', 0)
+    frame_h = session.get('last_frame_h', 0)
+    
+    return jsonify({
+        'boxes': boxes,
+        'frame_w': frame_w,
+        'frame_h': frame_h
+    })
+
 @stream_bp.route('/video-feed')
 def video_feed():
     session_id = request.args.get('session')
