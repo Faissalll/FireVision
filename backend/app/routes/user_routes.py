@@ -173,33 +173,42 @@ def update_settings(current_user):
 
 @user_bp.route('/history', methods=['GET'])
 def get_history():
+    print("➡️ Entering get_history logic")
     try:
         conn = get_db_connection()
+        if conn is None:
+             print("❌ DB Connection is None")
+             return jsonify({'error': 'DB Connection failed'}), 500
+             
         c = conn.cursor(dictionary=True)
         
         c.execute("SELECT * FROM alarms ORDER BY id DESC")
         rows = c.fetchall()
         
         history = []
-        for row in rows:
-            history.append({
-                "id": f"ALM-{row['id']:03d}", 
-                "db_id": row['id'],
-                "uuid": row['uuid'],
-                "time": row['timestamp'].split(' ')[1] if row['timestamp'] else "",
-                "date": row['timestamp'].split(' ')[0] if row['timestamp'] else "",
-                "camera": row['camera_id'],
-                "zone": row['zone'],
-                "confidence": row['confidence'],
-                "status": row.get('status', 'Unverified'),
-                "image": row.get('image_path', '')
-            })
+        if rows:
+            for row in rows:
+                history.append({
+                    "id": f"ALM-{row['id']:03d}", 
+                    "db_id": row['id'],
+                    "uuid": row['uuid'],
+                    "time": row['timestamp'].split(' ')[1] if row['timestamp'] else "",
+                    "date": row['timestamp'].split(' ')[0] if row['timestamp'] else "",
+                    "camera": row['camera_id'],
+                    "zone": row['zone'],
+                    "confidence": row['confidence'],
+                    "status": row.get('status', 'Unverified'),
+                    "image": row.get('image_path', '')
+                })
         
         conn.close()
+        print(f"✅ History count: {len(history)}")
         return jsonify(history)
             
     except Exception as e:
-        print(f"Error history: {e}")
+        print(f"❌ Error in get_history: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @user_bp.route('/history/update-status', methods=['POST'])
