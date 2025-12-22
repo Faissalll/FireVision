@@ -238,6 +238,42 @@ def process_frame():
                             print(f"📲 Telegram notification sent for process-frame")
             except Exception as e:
                 print(f"❌ Telegram notification error in process-frame: {e}")
+            
+            # 💾 Save alarm to database (throttle: 30 seconds)
+            try:
+                import uuid as uuid_module
+                if not hasattr(process_frame, 'last_alarm_save_time'):
+                    process_frame.last_alarm_save_time = 0
+                
+                now = time.time()
+                if now - process_frame.last_alarm_save_time > 30:
+                    from ..database import get_db_connection
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    
+                    confidence = detections[0].get("confidence", 0) if detections else 0
+                    alarm_uuid = str(uuid_module.uuid4())
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    c.execute("""
+                        INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        alarm_uuid,
+                        timestamp,
+                        "Browser Webcam",
+                        "Default Zone",
+                        confidence,
+                        "active",
+                        ""
+                    ))
+                    
+                    conn.commit()
+                    conn.close()
+                    process_frame.last_alarm_save_time = now
+                    print(f"💾 Alarm saved to database: {alarm_uuid}")
+            except Exception as e:
+                print(f"❌ Error saving alarm in process-frame: {e}")
         
         return jsonify({
             'success': True,

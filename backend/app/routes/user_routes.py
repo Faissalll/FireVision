@@ -194,6 +194,9 @@ def get_history():
                 "status": row['status'],
                 "image": row.get('image_path', '')
             })
+        
+        conn.close()
+        return jsonify(history)
             
     except Exception as e:
         print(f"Error history: {e}")
