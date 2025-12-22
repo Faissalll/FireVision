@@ -215,7 +215,9 @@ def generate_frames(session_id):
                     last_alarm_save_time[session_id] = now
             
             # Update Session State (for polling API)
-            session["last_boxes"] = detections  # Actually used by /api/detections endpoint?
+            session["last_boxes"] = detections
+            session["last_frame_w"] = frame.shape[1]
+            session["last_frame_h"] = frame.shape[0]
             # Ideally /api/detections should read from session["last_boxes"]
             # We need to verify stream_routes uses this.
             
