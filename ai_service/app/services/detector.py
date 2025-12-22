@@ -51,8 +51,8 @@ def load_model():
     # Model is expected to be in the root of the service
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) 
     
-    # Check for likely model names
-    possible_names = ['best (13).pt', 'best (17).pt', 'best.pt', 'yolov8n.pt']
+    # Check for likely model names - Using ONLY best (13).pt per user request
+    possible_names = ['best (13).pt', 'best.pt', 'yolov8n.pt']
     
     debug_log = f"Base: {base_dir} | "
     
