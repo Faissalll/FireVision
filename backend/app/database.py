@@ -3,18 +3,21 @@ import os
 
 def get_db_connection():
     try:
+        print(f"🔌 CONNECTING TO DB: Host={os.getenv('DB_HOST')}, User={os.getenv('DB_USER')}, DB={os.getenv('DB_NAME')}")
         conn = mysql.connector.connect(
             host=os.getenv('DB_HOST', 'localhost'),
             user=os.getenv('DB_USER', 'root'),
             password=os.getenv('DB_PASSWORD', ''),
-            database=os.getenv('DB_NAME', 'firevision'),
-            connection_timeout=10,  # 10 second timeout
-            pool_size=5
+            database=os.getenv('DB_NAME', 'railway'),
+            connection_timeout=10
         )
         print("✅ DB Connection successful")
         return conn
     except mysql.connector.Error as e:
         print(f"❌ DB Connection failed: {e}")
+        return None
+    except Exception as e:
+        print(f"❌ Unexpected DB error: {e}")
         return None
 
 def init_db():
