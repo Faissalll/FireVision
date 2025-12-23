@@ -6,6 +6,10 @@ import os
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Allow OPTIONS requests for CORS preflight
+        if request.method == 'OPTIONS':
+            return jsonify({'status': 'ok'}), 200
+            
         token = request.headers.get('Authorization')
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
