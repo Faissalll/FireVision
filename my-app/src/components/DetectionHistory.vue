@@ -86,11 +86,16 @@ const paginatedData = computed(() => {
 
 const stats = computed(() => {
     const today = new Date().toISOString().split('T')[0];
+    // Count ALL alarms for main stats
+    const allAlarms = historyData.value;
+    // Also count today's alarms specifically
     const todaysAlarms = historyData.value.filter(d => d.date === today);
+    
     return {
-        today: todaysAlarms.length,
-        completed: todaysAlarms.filter(d => d.status === 'Selesai').length,
-        falseAlarm: todaysAlarms.filter(d => d.status === 'False Alarm').length
+        // Total alarms today (matches layout "Ringkasan Hari Ini")
+        today: allAlarms.length, // Show total count for now
+        completed: allAlarms.filter(d => d.status === 'Selesai').length,
+        falseAlarm: allAlarms.filter(d => d.status === 'False Alarm').length
     };
 });
 
