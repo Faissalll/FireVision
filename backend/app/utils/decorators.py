@@ -21,3 +21,13 @@ def token_required(f):
         
         return f(current_user, *args, **kwargs)
     return decorated
+
+def decode_token(token):
+    """Decode JWT token and return username, or None if invalid"""
+    from flask import current_app
+    try:
+        data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        return data.get('username')
+    except Exception:
+        return None
+

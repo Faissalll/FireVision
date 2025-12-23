@@ -42,13 +42,6 @@ def profile_api(current_user):
                      return jsonify({'error': 'Username already taken'}), 409
             
             c.execute("UPDATE users SET username = %s WHERE username = %s", (new_username, username))
-            # If we had other fields like email/fullname, update them here too.
-            
-            # Create new token since username (identity) changed? 
-            # ideally yes, but for simplicity let's return success and let frontend handle re-login or state update.
-            # Actually, if we change username, the current token (containing old username) becomes invalid for future requests 
-            # that rely on looking up the user by the token's username payload.
-            # SO: We must issue a new token or warn the user.
             
             conn.commit()
             
@@ -331,3 +324,69 @@ def get_telegram_chat_id(current_user):
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@user_bp.route('/send-fire-alert', methods=['POST', 'OPTIONS'])
+def send_fire_alert():
+    """Send fire alert notification (Telegram) for browser-based detection"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        return response
+    
+    from ..services.notifier import TelegramNotifier
+    from ..utils.decorators import decode_token
+    
+    # Manual token verification
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Token required'}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_user = decode_token(token)
+    if not current_user:
+        return jsonify({'error': 'Invalid token'}), 401
+    
+    data = request.get_json() or {}
+    camera_name = data.get('camera_name', 'Unknown Camera')
+    message = data.get('message', f'🔥 FireVision Alert ({camera_name}) — Api terdeteksi!')
+    
+    username = current_user
+    
+    try:
+        # Fetch user's notification settings
+        conn = get_db_connection()
+        c = conn.cursor(dictionary=True)
+        c.execute("SELECT * FROM notification_settings WHERE username = %s", (username,))
+        settings = c.fetchone()
+        conn.close()
+        
+        if not settings:
+            return jsonify({'error': 'Notification settings not configured'}), 404
+        
+        sent = False
+        
+        # Send Telegram if enabled
+        if settings.get('telegram_enabled') and settings.get('telegram_bot_token') and settings.get('telegram_chat_id'):
+            try:
+                tn = TelegramNotifier(settings['telegram_bot_token'], settings['telegram_chat_id'])
+                tn.send_message(message)
+                print(f"📨 Telegram sent to {username} for camera {camera_name}")
+                sent = True
+            except Exception as e:
+                print(f"❌ Telegram Error: {e}")
+                return jsonify({'error': f'Telegram failed: {str(e)}'}), 500
+        else:
+            return jsonify({'error': 'Telegram not enabled or missing token/chat_id'}), 400
+        
+        if sent:
+            return jsonify({'status': 'sent', 'camera_name': camera_name})
+        else:
+            return jsonify({'error': 'No notification method enabled'}), 400
+            
+    except Exception as e:
+        print(f"❌ Error in send-fire-alert: {e}")
+        return jsonify({'error': str(e)}), 500
+

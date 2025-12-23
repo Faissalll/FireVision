@@ -223,9 +223,13 @@ def process_frame():
             if not detector.load_model():
                 return jsonify({'error': 'Failed to load model'}), 500
         
+        # Initialize session_data for single-frame detection
+        # Set consecutive_fire_frames=0 so first fire frame immediately triggers confirmation
         session_data = {
             "settings": {"sensitivity": sensitivity},
-            "frame_counter": 0
+            "frame_counter": 0,
+            "consecutive_fire_frames": 0,  # Will become 1 after detection, meeting threshold
+            "fire_confirmed": False
         }
         
         from ..services.detector import detect_fire
@@ -233,6 +237,7 @@ def process_frame():
         
         # 🔔 Send Telegram Notification if fire detected
         if fire_detected:
+            print(f"🔥 FIRE DETECTED in process-frame! Username: {username}")
             try:
                 from ..database import get_db_connection
                 from ..services.telegram_notifier import TelegramNotifier
@@ -243,9 +248,13 @@ def process_frame():
                 notif_settings = c.fetchone()
                 conn.close()
                 
+                print(f"📋 Notification settings for {username}: {notif_settings}")
+                
                 if notif_settings and notif_settings.get('telegram_enabled'):
                     bot_token = notif_settings.get('telegram_bot_token', '')
                     chat_id = notif_settings.get('telegram_chat_id', '')
+                    
+                    print(f"🔑 Token exists: {bool(bot_token)}, ChatID exists: {bool(chat_id)}")
                     
                     if bot_token and chat_id:
                         # Throttle using global dict
@@ -253,7 +262,11 @@ def process_frame():
                             process_frame.last_notify_time = 0
                         
                         now = time.time()
-                        if now - process_frame.last_notify_time > 10:
+                        time_since = now - process_frame.last_notify_time
+                        print(f"⏱️ Time since last notification: {time_since:.1f}s")
+                        
+                        if time_since > 10:
+                            print("📤 Sending Telegram notification...")
                             notifier = TelegramNotifier(bot_token, chat_id)
                             confidence = detections[0].get("confidence", 0) * 100 if detections else 0
                             message = (
@@ -265,9 +278,17 @@ def process_frame():
                             )
                             notifier.send_photo_from_cv2(annotated_frame, caption=message)
                             process_frame.last_notify_time = now
-                            print(f"📲 Telegram notification sent for process-frame")
+                            print(f"✅ Telegram notification sent for process-frame")
+                        else:
+                            print(f"⏳ Telegram throttled ({time_since:.1f}s < 10s)")
+                    else:
+                        print(f"⚠️ Missing token or chat_id")
+                else:
+                    print(f"⚠️ Telegram not enabled or no settings found")
             except Exception as e:
                 print(f"❌ Telegram notification error in process-frame: {e}")
+                import traceback
+                traceback.print_exc()
             
             # 💾 Save alarm to database (throttle: 30 seconds)
             try:

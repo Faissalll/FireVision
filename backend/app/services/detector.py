@@ -192,6 +192,9 @@ def generate_frames(session_id):
                 session["fire_was_detected"] = True
                 camera_display_name = session.get("camera_name", f"Camera {session_id[:4]}")
                 print(f"🔥 FIRE DETECTED on {camera_display_name}! Processing alerts...")
+                
+                # DEBUG: Print notification settings
+                print(f"📋 Notification Settings: telegram_enabled={ns.get('telegram_enabled')}, has_token={bool(ns.get('telegram_bot_token'))}, has_chat_id={bool(ns.get('telegram_chat_id'))}")
 
                 # 1. TELEGRAM
                 if ns.get("telegram_enabled") and ns.get("telegram_bot_token") and ns.get("telegram_chat_id"):

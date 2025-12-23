@@ -6,7 +6,7 @@ import { auth } from "../store/auth";
 const alarmAudio = new Audio(alarmSound);
 alarmAudio.loop = true;
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000";
 const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://127.0.0.1:7860";
 
 const props = defineProps({
@@ -275,6 +275,7 @@ const processWebcamFrame = async (index) => {
     
     try {
         const token = auth.user?.token || '';
+        const username = auth.user?.username || 'guest';
         const response = await fetch(`${AI_BASE_URL}/api/process-frame`, {
             method: 'POST',
             headers: {
@@ -283,7 +284,8 @@ const processWebcamFrame = async (index) => {
             },
             body: JSON.stringify({
                 frame: frameData,
-                sensitivity: 70
+                sensitivity: 70,
+                username: username
             })
         });
         
@@ -418,6 +420,41 @@ const saveAlarmToBackend = async (confidence, cameraName = 'Multi-Camera') => {
     }
 };
 
+// ========== SEND TELEGRAM NOTIFICATION ==========
+let lastTelegramTime = 0;
+const sendTelegramNotification = async (cameraName = 'Multi-Camera') => {
+    const now = Date.now();
+    // Throttle: only send once per 30 seconds
+    if (now - lastTelegramTime < 30000) {
+        console.log("⏳ Telegram throttled (30s cooldown)");
+        return;
+    }
+    lastTelegramTime = now;
+    
+    try {
+        const token = auth.user?.token || '';
+        const response = await fetch(`${API_BASE_URL}/api/send-fire-alert`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                camera_name: cameraName,
+                message: `🔥 FireVision Alert (${cameraName}) — Api terdeteksi!`
+            })
+        });
+        
+        if (response.ok) {
+            console.log("📨 Telegram notification sent!");
+        } else {
+            console.log("⚠️ Telegram notification failed:", response.status);
+        }
+    } catch (error) {
+        console.error("❌ Error sending Telegram:", error);
+    }
+};
+
 // Check if ANY camera has detections to play sound
 // Check if ANY camera has detections to play sound and notify
 // Check if ANY camera has detections to play sound and notify
@@ -438,6 +475,9 @@ const checkAlarmStatus = () => {
             ? anyFireCamera.detections.reduce((sum, d) => sum + (d.confidence || 0), 0) / anyFireCamera.detections.length
             : 85;
         saveAlarmToBackend(avgConfidence, anyFireCamera.name || 'Multi-Camera');
+        
+        // Note: Telegram notification handled by ai_service internally via /api/process-frame
+        // sendTelegramNotification disabled due to CORS issues with separate backend
 
         // Audio
         if (enableSound.value) {

@@ -162,15 +162,32 @@ def detect_fire(frame, session_data):
         
         if time_since > 60:
             print(f"🔔 TRIGGERING TELEGRAM ALERT for Session {session_data.get('id')}...")
-            # Run in background to not block frame
-            import threading
-            try:
-                threading.Thread(target=TelegramNotifier.send_fire_alert, 
-                               args=(frame.copy(), session_data.get("camera_name", "Camera"))).start()
-                last_notification_time[session_data.get('id', 'default')] = current_time
-                print("✅ Telegram Thread Started")
-            except Exception as e:
-                print(f"❌ Failed to start Telegram thread: {e}")
+            # Get user's notification settings
+            notif_settings = session_data.get("notification_settings", {})
+            bot_token = notif_settings.get("telegram_bot_token", "")
+            chat_id = notif_settings.get("telegram_chat_id", "")
+            telegram_enabled = notif_settings.get("telegram_enabled", False)
+            
+            if telegram_enabled and bot_token and chat_id:
+                import threading
+                def send_telegram():
+                    try:
+                        notifier = TelegramNotifier(bot_token, chat_id)
+                        camera_name = session_data.get("camera_name", "Camera")
+                        message = f"🔥 FireVision Alert ({camera_name}) — Api terdeteksi!"
+                        notifier.send_photo_from_cv2(frame.copy(), caption=message)
+                        print("✅ Telegram sent successfully")
+                    except Exception as e:
+                        print(f"❌ Telegram Error: {e}")
+                
+                try:
+                    threading.Thread(target=send_telegram).start()
+                    last_notification_time[session_data.get('id', 'default')] = current_time
+                    print("✅ Telegram Thread Started")
+                except Exception as e:
+                    print(f"❌ Failed to start Telegram thread: {e}")
+            else:
+                print(f"⚠️ Telegram not configured: enabled={telegram_enabled}, token={bool(bot_token)}, chat_id={bool(chat_id)}")
 
     # 2. Save to Database (Rate Limited: 10s)
     if fire_confirmed:
