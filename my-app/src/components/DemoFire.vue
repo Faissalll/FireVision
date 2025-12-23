@@ -632,6 +632,42 @@ const startWebcamFrameLoop = () => {
     requestAnimationFrame(processLoop);
 };
 
+// ========== SAVE ALARM TO RAILWAY BACKEND ==========
+let lastAlarmSaveTime = 0;
+const saveAlarmToBackend = async (confidence, cameraName = 'Browser Webcam') => {
+    const now = Date.now();
+    // Throttle: only save once per 5 seconds
+    if (now - lastAlarmSaveTime < 5000) {
+        console.log("⏳ Alarm save throttled (5s cooldown)");
+        return;
+    }
+    lastAlarmSaveTime = now;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/add-alarm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                camera_id: cameraName,
+                confidence: confidence,
+                zone: 'Default Zone',
+                timestamp: new Date().toISOString().replace('T', ' ').split('.')[0]
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log("💾 Alarm saved to backend:", data);
+        } else {
+            console.error("❌ Failed to save alarm:", response.status);
+        }
+    } catch (error) {
+        console.error("❌ Error saving alarm to backend:", error);
+    }
+};
+
 const processWebcamFrame = async () => {
     if (!browserVideoRef.value || !browserCanvasRef.value) return;
     
@@ -690,6 +726,12 @@ const processWebcamFrame = async () => {
             if (data.fire_detected) {
                 // Reset loss counter if fire detected
                 processWebcamFrame.fireLossCount = 0;
+                
+                // 🚀 Save alarm to Railway backend (throttled to 5s)
+                const avgConfidence = data.detections.length > 0 
+                    ? data.detections.reduce((sum, d) => sum + d.confidence, 0) / data.detections.length * 100
+                    : 85;
+                saveAlarmToBackend(avgConfidence, 'Browser Webcam');
                 
                 if (enableSound.value) {
                      if (alarmAudio.paused) {

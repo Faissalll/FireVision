@@ -171,6 +171,65 @@ def update_settings(current_user):
             if 'noiseReduction' in data: settings['noiseReduction'] = data['noiseReduction']
         return jsonify({'status': 'updated_all'})
 
+@user_bp.route('/add-alarm', methods=['POST'])
+def add_alarm():
+    """Add new alarm record from frontend detection"""
+    print("🚨 POST /api/add-alarm called")
+    
+    try:
+        data = request.get_json() or {}
+        
+        # Get alarm data from request
+        camera_id = data.get('camera_id', 'Unknown Camera')
+        confidence = float(data.get('confidence', 0))
+        zone = data.get('zone', 'Default Zone')
+        timestamp = data.get('timestamp', '')
+        
+        # Generate UUID for this alarm
+        import uuid
+        from datetime import datetime
+        
+        alarm_uuid = str(uuid.uuid4())
+        if not timestamp:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        conn = get_db_connection()
+        if not conn:
+            print("❌ DB connection failed")
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO alarms (uuid, timestamp, camera_id, zone, confidence, status, image_path)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            alarm_uuid,
+            timestamp,
+            camera_id,
+            zone,
+            confidence,
+            'active',
+            ''
+        ))
+        
+        conn.commit()
+        alarm_id = cursor.lastrowid
+        conn.close()
+        
+        print(f"💾 Alarm saved: ID={alarm_id}, UUID={alarm_uuid}, Camera={camera_id}, Confidence={confidence}")
+        
+        return jsonify({
+            'success': True,
+            'alarm_id': alarm_id,
+            'uuid': alarm_uuid
+        })
+        
+    except Exception as e:
+        print(f"❌ Error saving alarm: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @user_bp.route('/history', methods=['GET'])
 def get_history():
     """Ultra-simplified history endpoint - guaranteed to return valid response"""
