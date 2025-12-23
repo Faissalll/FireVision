@@ -189,6 +189,43 @@ const saveBackendSettings = async (type) => {
     }
 };
 
+const testTelegram = async () => {
+    if (!telegramConfig.value.botToken || !telegramConfig.value.chatId) {
+        alert("Mohon isi Bot Token dan Chat ID terlebih dahulu.");
+        return;
+    }
+    
+    // Use local loading state or shared isLoading
+    const originalLoading = isLoading.value;
+    isLoading.value = true;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/telegram/test`, {
+             method: 'POST',
+             headers: { 
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${auth.user.token}`
+             },
+             body: JSON.stringify({ 
+                 token: telegramConfig.value.botToken,
+                 chat_id: telegramConfig.value.chatId
+             })
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(data.message || "Tes berhasil! Cek Telegram Anda.");
+        } else {
+            alert("Tes Gagal: " + (data.error || "Unknown error"));
+        }
+    } catch (e) {
+        alert("Error koneksi: " + e.message);
+    } finally {
+        isLoading.value = originalLoading; // Restore or just false
+        isLoading.value = false;
+    }
+};
+
 const saveSuccess = ref(false);
 
 const saveLocalSettings = () => {
@@ -302,8 +339,13 @@ const saveLocalSettings = () => {
                     </label>
                 </div>
 
-                <div class="pt-4 border-t border-gray-800">
-                    <button @click="saveBackendSettings('telegram')" :disabled="isLoading" class="w-full py-2 bg-[#2AABEE]/10 hover:bg-[#2AABEE]/20 text-[#2AABEE] rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <div class="pt-4 border-t border-gray-800 space-y-3">
+                    <button @click="testTelegram" :disabled="isLoading || !telegramConfig.botToken || !telegramConfig.chatId" class="w-full py-2 bg-[#2AABEE]/10 hover:bg-[#2AABEE]/20 text-[#2AABEE] rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 border border-[#2AABEE]/20">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                         Test Notifikasi
+                    </button>
+
+                    <button @click="saveBackendSettings('telegram')" :disabled="isLoading" class="w-full py-2 bg-[#2AABEE] hover:bg-[#2390c8] text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#2AABEE]/20">
                         <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <span v-if="isLoading">Menyimpan...</span>
                         <span v-else>Simpan Konfigurasi</span>

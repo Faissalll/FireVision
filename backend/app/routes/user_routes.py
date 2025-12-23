@@ -286,6 +286,27 @@ def update_history_status():
         print(f"Error update history: {e}")
         return jsonify({'error': str(e)}), 500
 
+@user_bp.route('/telegram/test', methods=['POST'])
+@token_required
+def test_telegram_settings(current_user):
+    data = request.get_json() or {}
+    token = data.get('token')
+    chat_id = data.get('chat_id')
+    
+    if not token or not chat_id:
+        return jsonify({'error': 'Token and Chat ID required'}), 400
+        
+    try:
+        from ..services.notifier import TelegramNotifier
+        tn = TelegramNotifier(token, chat_id)
+        # Send a simple test message
+        tn.send_message("🔔 Tes Notifikasi FireVision Berhasil!\n\nJika Anda menerima pesan ini, konfigurasi bot Anda sudah benar.")
+        
+        return jsonify({'status': 'success', 'message': 'Test message sent'})
+    except Exception as e:
+        print(f"❌ Telegram Test Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @user_bp.route('/telegram/get-chat-id', methods=['POST'])
 @token_required
 def get_telegram_chat_id(current_user):
