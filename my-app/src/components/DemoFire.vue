@@ -694,7 +694,8 @@ const processWebcamFrame = async () => {
             },
             body: JSON.stringify({
                 frame: frameData,
-                sensitivity: 70
+                sensitivity: 70,
+                camera_name: 'Browser Webcam'
             })
         });
         

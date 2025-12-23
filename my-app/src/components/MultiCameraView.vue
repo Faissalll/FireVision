@@ -295,7 +295,8 @@ const processWebcamFrame = async (index) => {
             body: JSON.stringify({
                 frame: frameData,
                 sensitivity: 70,
-                username: username
+                username: username,
+                camera_name: cam.name || `Camera ${index + 1}`
             })
         });
         

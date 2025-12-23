@@ -203,6 +203,7 @@ def process_frame():
         frame_data = data['frame']
         sensitivity = data.get('sensitivity', 70)
         username = data.get('username', 'admin')
+        camera_name = data.get('camera_name', 'Browser Webcam')
         
         import base64
         import numpy as np
@@ -271,7 +272,7 @@ def process_frame():
                             confidence = detections[0].get("confidence", 0) * 100 if detections else 0
                             message = (
                                 f"🔥 *PERINGATAN KEBAKARAN!*\n\n"
-                                f"📍 Kamera: Browser Webcam\n"
+                                f"📍 Kamera: {camera_name}\n"
                                 f"⏰ Waktu: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
                                 f"📊 Confidence: {confidence:.1f}%\n\n"
                                 f"Segera lakukan tindakan!"
@@ -312,7 +313,7 @@ def process_frame():
                     """, (
                         alarm_uuid,
                         timestamp,
-                        "Browser Webcam",
+                        camera_name,
                         "Default Zone",
                         confidence,
                         "active",
@@ -337,4 +338,3 @@ def process_frame():
     except Exception as e:
         print(f"[PROCESS_FRAME] Error: {e}")
         return jsonify({'error': str(e)}), 500
-
