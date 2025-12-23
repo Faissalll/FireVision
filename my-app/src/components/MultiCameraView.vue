@@ -1,10 +1,28 @@
 <script setup>
-import { ref, onUnmounted } from 'vue';
-import alarmSound from "../assets/alarm.mp3";
+import { ref, onUnmounted, watch, onMounted } from 'vue';
+import alarmSound1 from "../assets/alarm.mp3";
+import alarmSound2 from "../assets/alarm2.wav";
+import alarmSound3 from "../assets/alarm3.wav";
 import { auth } from "../store/auth";
 
-const alarmAudio = new Audio(alarmSound);
+// Map sound types to audio sources
+const soundSources = {
+    siren1: alarmSound1,
+    siren2: alarmSound2,
+    beep: alarmSound3
+};
+
+// Single audio object
+const alarmAudio = new Audio(alarmSound1);
 alarmAudio.loop = true;
+
+// Function to switch audio source
+const switchAudioSource = (type) => {
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+    alarmAudio.src = soundSources[type] || soundSources.siren1;
+    console.log("🔊 Audio source changed to:", type, alarmAudio.src);
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000";
 const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://127.0.0.1:7860";
@@ -49,28 +67,22 @@ const saveLocalSettings = () => {
     localStorage.setItem('fv_popup', enablePopup.value);
     localStorage.setItem('fv_sound', enableSound.value);
     
-    if (alarmAudio) {
-        alarmAudio.volume = volumeAlarm.value / 100;
-        
-        // Apply Sound Type Logic
-        if (soundType.value === 'siren2') alarmAudio.playbackRate = 1.5;
-        else if (soundType.value === 'beep') alarmAudio.playbackRate = 0.5;
-        else alarmAudio.playbackRate = 1.0;
-    }
+    // Switch to selected sound type
+    switchAudioSource(soundType.value);
+    alarmAudio.volume = volumeAlarm.value / 100;
     
-    // Notification Feedback
-    if ("Notification" in window && Notification.permission === "granted") {
+    // Show success message (only if popup enabled)
+    if (enablePopup.value && "Notification" in window && Notification.permission === "granted") {
         new Notification("✅ Pengaturan Disimpan", {
             body: `Volume: ${volumeAlarm.value}%, Jenis: ${soundType.value}`,
             icon: "/favicon.ico",
             silent: true
         });
-    } else {
-        alert("Pengaturan Lokal Disimpan!");
     }
+    console.log("✅ Settings saved:", { volume: volumeAlarm.value, sound: soundType.value });
 
     // Audio Preview
-    if (enableSound.value && alarmAudio) {
+    if (enableSound.value) {
         alarmAudio.currentTime = 0;
         alarmAudio.play().catch(e => console.log(e));
         setTimeout(() => {
@@ -85,13 +97,12 @@ const saveLocalSettings = () => {
 };
 
 // LOAD & SAVE CAMERA NAMES & SETTINGS
-import { watch, onMounted } from 'vue';
+// Note: watch already imported at top
 
 onMounted(async () => {
     // Load Local Settings
     const vol = localStorage.getItem('fv_volume');
     if (vol) volumeAlarm.value = Number(vol);
-    if(alarmAudio) alarmAudio.volume = volumeAlarm.value / 100;
     
     const popup = localStorage.getItem('fv_popup');
     if (popup) enablePopup.value = (popup === 'true');
@@ -99,16 +110,15 @@ onMounted(async () => {
     const snd = localStorage.getItem('fv_sound');
     if (snd) enableSound.value = (snd === 'true');
 
-    // Load Sound Type
+    // Load Sound Type and set alarm source
     const sType = localStorage.getItem('fv_soundType');
     if (sType) {
         soundType.value = sType;
-        if (alarmAudio) {
-            if (sType === 'siren2') alarmAudio.playbackRate = 1.5;
-            else if (sType === 'beep') alarmAudio.playbackRate = 0.5;
-            else alarmAudio.playbackRate = 1.0;
-        }
+        switchAudioSource(sType);
     }
+    
+    // Apply volume to alarm audio
+    alarmAudio.volume = volumeAlarm.value / 100;
 
     // Setup Notification Permission
     if ("Notification" in window && Notification.permission !== "granted") {
@@ -486,11 +496,9 @@ const checkAlarmStatus = () => {
                 alarmAudio.play().catch(e => console.warn("Audio play blocked", e));
             }
         } else {
-             // If sound disabled but playing, stop it
-             if (!alarmAudio.paused) {
-                alarmAudio.pause();
-                alarmAudio.currentTime = 0;
-            }
+             // If sound disabled but playing, stop
+             alarmAudio.pause();
+             alarmAudio.currentTime = 0;
         }
         
         // Browser Notification
@@ -507,10 +515,8 @@ const checkAlarmStatus = () => {
         // No fire currently detected
         // Only stop audio if fire has been lost for > 3 seconds (3000ms)
         if (now - checkAlarmStatus.lastFireTime > 3000) {
-            if (!alarmAudio.paused) {
-                alarmAudio.pause();
-                alarmAudio.currentTime = 0;
-            }
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
         }
     }
 };

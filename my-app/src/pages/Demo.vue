@@ -28,19 +28,27 @@ const handleModalClose = () => {
 
 
 const handleModeChange = (mode) => {
+    console.log("🔘 Mode changed to:", mode);
     if (mode === 'multi4') {
         const userStr = localStorage.getItem("user");
+        console.log("👤 User data string:", userStr);
         const user = userStr ? JSON.parse(userStr) : {};
+        console.log("👤 Parsed user:", user);
+        
         if (user.plan !== 'premium' && user.username !== 'admin') { 
             // Simple check, assumming 'admin' or explicit 'premium' plan
             // Since default is 'free', strictly check for free
+            console.log("⚠️ Access restricted. User plan:", user.plan);
             if (!user.plan || user.plan === 'free') {
+                console.log("🔒 Triggering Modal");
                 modalTitle.value = "Fitur Premium";
                 modalMessage.value = "Fitur Multi-Camera (4x) khusus untuk pengguna Premium. Silakan upgrade plan Anda untuk akses penuh!";
                 modalButtonText.value = "Lihat Paket";
                 showModal.value = true;
                 return;
             }
+        } else {
+            console.log("✅ Access granted. Plan:", user.plan);
         }
     }
     cameraMode.value = mode;

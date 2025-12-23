@@ -1,12 +1,22 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import alarmSound from "../assets/alarm.mp3";
+import alarmSound1 from "../assets/alarm.mp3";
+import alarmSound2 from "../assets/alarm2.wav";
+import alarmSound3 from "../assets/alarm3.wav";
 import { auth } from '../store/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
 
+// Map sound types to audio sources
+const soundSources = {
+    siren1: alarmSound1,
+    siren2: alarmSound2,
+    beep: alarmSound3
+};
+
 // Audio Object
-const alarmAudio = new Audio(alarmSound);
+const alarmAudio = new Audio(alarmSound1);
+alarmAudio.loop = true;
 
 // State for Telegram
 const telegramConfig = ref({
@@ -179,6 +189,8 @@ const saveBackendSettings = async (type) => {
     }
 };
 
+const saveSuccess = ref(false);
+
 const saveLocalSettings = () => {
     // Save to LocalStorage
     localStorage.setItem('fv_volume', alertConfig.value.volume);
@@ -187,25 +199,44 @@ const saveLocalSettings = () => {
     localStorage.setItem('fv_sound', alertConfig.value.soundEnabled);
     
     // Update Audio Instance
-    if (alarmAudio) {
-        alarmAudio.volume = alertConfig.value.volume / 100;
-        
-        if (alertConfig.value.soundType === 'siren2') alarmAudio.playbackRate = 1.5;
-        else if (alertConfig.value.soundType === 'beep') alarmAudio.playbackRate = 0.5;
-        else alarmAudio.playbackRate = 1.0;
-    }
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+    alarmAudio.src = soundSources[alertConfig.value.soundType] || soundSources.siren1;
+    alarmAudio.volume = alertConfig.value.volume / 100;
     
-    if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("✅ Pengaturan Disimpan", {
-            body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
-            icon: "/favicon.ico",
-            silent: true
-        });
-    } else {
-        alert("Pengaturan Lokal Disimpan!");
+    // Show visual success message
+    saveSuccess.value = true;
+    setTimeout(() => {
+        saveSuccess.value = false;
+    }, 3000);
+    
+    // Notification Feedback
+    if (alertConfig.value.browserPopup && "Notification" in window) {
+        if (Notification.permission === "granted") {
+            new Notification("✅ Pengaturan Disimpan", {
+                body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
+                icon: "/favicon.ico",
+                silent: true
+            });
+        } else if (Notification.permission !== "denied") {
+            // Request permission if not denied yet
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    new Notification("✅ Pengaturan Disimpan", {
+                       body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
+                       icon: "/favicon.ico",
+                       silent: true
+                    });
+                }
+            });
+        } else {
+            console.warn("Notification permission denied by user");
+        }
     }
+    console.log("✅ Settings saved:", { volume: alertConfig.value.volume, sound: alertConfig.value.soundType });
 
-    if (alertConfig.value.soundEnabled && alarmAudio) {
+    // Audio Preview
+    if (alertConfig.value.soundEnabled) {
         alarmAudio.currentTime = 0;
         alarmAudio.play().catch(e => console.log("Audio preview error:", e));
         setTimeout(() => {
@@ -403,6 +434,9 @@ const saveLocalSettings = () => {
                      <button @click="saveLocalSettings" class="w-full py-2 bg-[#6C4DFF] hover:bg-[#5839ff] text-white rounded-lg text-sm font-semibold transition-colors shadow-lg hover:shadow-[#6C4DFF]/25">
                         Simpan Pengaturan Lokal
                     </button>
+                    <p v-if="saveSuccess" class="text-center text-xs text-green-400 mt-2 font-medium animate-pulse">
+                        ✓ Data tersimpan
+                    </p>
                 </div>
 
             </div>
