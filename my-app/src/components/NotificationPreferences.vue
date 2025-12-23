@@ -278,7 +278,7 @@ const saveLocalSettings = () => {
                         <span v-else>Simpan Konfigurasi</span>
                     </button>
                     
-                    <p v-if="telegramStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Data disimpan & terhubung ke Backend!</p>
+
                     <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal menyimpan. Cek koneksi.</p>
                 </div>
             </div>
@@ -336,7 +336,7 @@ const saveLocalSettings = () => {
                         <span v-if="isLoading">Menyimpan...</span>
                         <span v-else>Simpan Konfigurasi</span>
                     </button>
-                    <p v-if="emailStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Data disimpan & terhubung ke Backend!</p>
+
                     <p v-if="emailStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal menyimpan. Cek konfigurasi.</p>
                 </div>
             </div>
