@@ -382,6 +382,42 @@ const stopAll = () => {
     }
 };
 
+// ========== SAVE ALARM TO RAILWAY BACKEND ==========
+let lastAlarmSaveTime = 0;
+const saveAlarmToBackend = async (confidence, cameraName = 'Multi-Camera') => {
+    const now = Date.now();
+    // Throttle: only save once per 5 seconds
+    if (now - lastAlarmSaveTime < 5000) {
+        console.log("⏳ Alarm save throttled (5s cooldown)");
+        return;
+    }
+    lastAlarmSaveTime = now;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/add-alarm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                camera_id: cameraName,
+                confidence: confidence,
+                zone: 'Default Zone',
+                timestamp: new Date().toISOString().replace('T', ' ').split('.')[0]
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log("💾 Alarm saved to backend:", data);
+        } else {
+            console.error("❌ Failed to save alarm:", response.status);
+        }
+    } catch (error) {
+        console.error("❌ Error saving alarm to backend:", error);
+    }
+};
+
 // Check if ANY camera has detections to play sound
 // Check if ANY camera has detections to play sound and notify
 // Check if ANY camera has detections to play sound and notify
@@ -396,6 +432,12 @@ const checkAlarmStatus = () => {
     if (anyFireCamera) {
         // Update last time fire was seen
         checkAlarmStatus.lastFireTime = now;
+
+        // 🚀 Save alarm to Railway backend (throttled to 5s)
+        const avgConfidence = anyFireCamera.detections.length > 0
+            ? anyFireCamera.detections.reduce((sum, d) => sum + (d.confidence || 0), 0) / anyFireCamera.detections.length
+            : 85;
+        saveAlarmToBackend(avgConfidence, anyFireCamera.name || 'Multi-Camera');
 
         // Audio
         if (enableSound.value) {
