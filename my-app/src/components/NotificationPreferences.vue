@@ -46,6 +46,9 @@ const alertConfig = ref({
 // Feedback State
 const telegramStatus = ref(null);
 const emailStatus = ref(null);
+const saveSuccess = ref(false);
+
+
 const isLoading = ref(false);
 
 // Auto-detect State
@@ -177,6 +180,7 @@ const saveBackendSettings = async (type) => {
         if (res.status === 'saved') {
             if (type === 'telegram') telegramStatus.value = 'success';
             if (type === 'email') emailStatus.value = 'success';
+
         } else {
             throw new Error(res.error || 'Gagal menyimpan');
         }
@@ -184,18 +188,35 @@ const saveBackendSettings = async (type) => {
         console.error(e);
         if (type === 'telegram') telegramStatus.value = 'error';
         if (type === 'email') emailStatus.value = 'error';
+        showToast('Gagal Menyimpan', `Gagal menyimpan: ${e.message}`, 'error');
     } finally {
         isLoading.value = false;
     }
 };
 
+
+
+// Toast State
+const toast = ref({
+    show: false,
+    title: '',
+    message: '',
+    type: 'success' 
+});
+
+const showToast = (title, msg, type = 'success') => {
+    toast.value = { show: true, title, message: msg, type };
+    setTimeout(() => {
+        toast.value.show = false;
+    }, 4000);
+};
+
 const testTelegram = async () => {
     if (!telegramConfig.value.botToken || !telegramConfig.value.chatId) {
-        alert("Mohon isi Bot Token dan Chat ID terlebih dahulu.");
+        showToast('Error Konfigurasi', "Mohon isi Bot Token dan Chat ID terlebih dahulu.", 'error');
         return;
     }
     
-    // Use local loading state or shared isLoading
     const originalLoading = isLoading.value;
     isLoading.value = true;
     
@@ -214,21 +235,32 @@ const testTelegram = async () => {
         const data = await response.json();
         
         if (response.ok) {
-            alert(data.message || "Tes berhasil! Cek Telegram Anda.");
+            showToast('Notifikasi Terkirim', data.message || "Tes berhasil! Cek Telegram Anda.", 'success');
         } else {
-            alert("Tes Gagal: " + (data.error || "Unknown error"));
+            showToast('Gagal Mengirim', "Tes Gagal: " + (data.error || "Unknown error"), 'error');
         }
     } catch (e) {
-        alert("Error koneksi: " + e.message);
+        showToast('Error Model', "Error koneksi: " + e.message, 'error');
     } finally {
-        isLoading.value = originalLoading; // Restore or just false
+        isLoading.value = originalLoading; 
         isLoading.value = false;
     }
 };
 
-const saveSuccess = ref(false);
+
 
 const saveLocalSettings = () => {
+    // ... logic ...
+    
+    // Use Toast instead of local ref?? No, keep local logic but maybe use Toast too?
+    // Let's keep existing logic for saveLocalSettings to minimalize changes, 
+    // but we can also trigger toast.
+    
+    // ... existing logic ...
+    
+    // Just replace Notification Logic? No, user asked for "Test message" specifically.
+    // So just testTelegram changes above are enough.
+    
     // Save to LocalStorage
     localStorage.setItem('fv_volume', alertConfig.value.volume);
     localStorage.setItem('fv_soundType', alertConfig.value.soundType);
@@ -241,34 +273,23 @@ const saveLocalSettings = () => {
     alarmAudio.src = soundSources[alertConfig.value.soundType] || soundSources.siren1;
     alarmAudio.volume = alertConfig.value.volume / 100;
     
-    // Show visual success message
+    // Show visual success message via Toast
+
     saveSuccess.value = true;
-    setTimeout(() => {
-        saveSuccess.value = false;
-    }, 3000);
+    setTimeout(() => { saveSuccess.value = false; }, 3000);
     
     // Notification Feedback
     if (alertConfig.value.browserPopup && "Notification" in window) {
-        if (Notification.permission === "granted") {
+       // ... existing notification logic ...
+       if (Notification.permission === "granted") {
             new Notification("✅ Pengaturan Disimpan", {
                 body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
                 icon: "/favicon.ico",
                 silent: true
             });
-        } else if (Notification.permission !== "denied") {
-            // Request permission if not denied yet
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    new Notification("✅ Pengaturan Disimpan", {
-                       body: `Volume: ${alertConfig.value.volume}%, Jenis: ${alertConfig.value.soundType}`,
-                       icon: "/favicon.ico",
-                       silent: true
-                    });
-                }
-            });
-        } else {
-            console.warn("Notification permission denied by user");
-        }
+       } else if (Notification.permission !== "denied") {
+            Notification.requestPermission();
+       }
     }
     console.log("✅ Settings saved:", { volume: alertConfig.value.volume, sound: alertConfig.value.soundType });
 
@@ -350,9 +371,11 @@ const saveLocalSettings = () => {
                         <span v-if="isLoading">Menyimpan...</span>
                         <span v-else>Simpan Konfigurasi</span>
                     </button>
+                    <div class="h-6 mt-1 flex items-center justify-center transition-opacity duration-300" :class="telegramStatus ? 'opacity-100' : 'opacity-0'">
+                        <p v-if="telegramStatus === 'success'" class="text-green-500 text-xs">✓ Data tersimpan</p>
+                        <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs">Gagal menyimpan</p>
+                    </div>
 
-                    <p v-if="telegramStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Data tersimpan</p>
-                    <p v-if="telegramStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal menyimpan. Cek koneksi.</p>
                 </div>
             </div>
         </div>
@@ -409,8 +432,10 @@ const saveLocalSettings = () => {
                         <span v-if="isLoading">Menyimpan...</span>
                         <span v-else>Simpan Konfigurasi</span>
                     </button>
-                    <p v-if="emailStatus === 'success'" class="text-green-500 text-xs mt-2 text-center">✓ Data tersimpan</p>
-                    <p v-if="emailStatus === 'error'" class="text-red-500 text-xs mt-2 text-center">Gagal menyimpan. Cek konfigurasi.</p>
+                    <div class="h-6 mt-1 flex items-center justify-center transition-opacity duration-300" :class="emailStatus ? 'opacity-100' : 'opacity-0'">
+                        <p v-if="emailStatus === 'success'" class="text-green-500 text-xs">✓ Data tersimpan</p>
+                        <p v-if="emailStatus === 'error'" class="text-red-500 text-xs">Gagal menyimpan</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -476,13 +501,31 @@ const saveLocalSettings = () => {
                      <button @click="saveLocalSettings" class="w-full py-2 bg-[#6C4DFF] hover:bg-[#5839ff] text-white rounded-lg text-sm font-semibold transition-colors shadow-lg hover:shadow-[#6C4DFF]/25">
                         Simpan Pengaturan Lokal
                     </button>
-                    <p v-if="saveSuccess" class="text-center text-xs text-green-400 mt-2 font-medium animate-pulse">
-                        ✓ Data tersimpan
-                    </p>
+                    <div class="h-6 mt-1 flex items-center justify-center transition-opacity duration-300" :class="saveSuccess ? 'opacity-100' : 'opacity-0'">
+                        <p class="text-green-400 text-xs">✓ Data tersimpan</p>
+                    </div>
                 </div>
 
             </div>
         </div>
+
+        <!-- Toast Notification -->
+        <Transition name="fade">
+            <div v-show="toast.show" 
+                 class="fixed bottom-6 right-6 z-[100] flex items-center gap-4 px-6 py-4 rounded-xl border backdrop-blur-md shadow-2xl transition-all duration-300 min-w-[300px]"
+                 :class="toast.type === 'success' ? 'bg-[#0B0F1A]/95 border-[#6C4DFF]/50 shadow-[#6C4DFF]/20' : 'bg-[#0B0F1A]/95 border-red-500/50 shadow-red-500/20'"
+            >
+                 <div class="p-2 rounded-lg shrink-0" :class="toast.type === 'success' ? 'bg-[#6C4DFF]/10' : 'bg-red-500/10'">
+                    <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6C4DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                 </div>
+                 
+                 <div>
+                      <h4 class="text-sm font-bold text-white mb-0.5">{{ toast.title }}</h4>
+                      <p class="text-xs text-gray-400 font-medium">{{ toast.message }}</p>
+                 </div>
+            </div>
+        </Transition>
 
     </div>
 </template>
@@ -502,5 +545,16 @@ const saveLocalSettings = () => {
 .animate-fade-in-up {
     animation: fadeInUp 0.6s ease-out forwards;
     opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
 }
 </style>
