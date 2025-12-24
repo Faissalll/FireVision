@@ -306,7 +306,7 @@ const saveLocalSettings = () => {
 </script>
 
 <template>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
         
         <!-- 1. Telegram Card -->
         <div class="bg-[#0B0F1A] rounded-2xl p-6 border border-gray-800/50 shadow-lg hover:border-[#6C4DFF]/30 transition-all animate-fade-in-up" style="animation-delay: 0.1s;">
