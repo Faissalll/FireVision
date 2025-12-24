@@ -1186,6 +1186,8 @@ onMounted(async () => {
 
                         <!-- Sensitivity Slider Removed -->
 
+                        <!-- Settings Removed as per request -->
+                        <!--
                         <div class="setting-group">
                             <div class="setting-row">
                                 <label class="setting-label"
@@ -1232,6 +1234,7 @@ onMounted(async () => {
                                 detection
                             </p>
                         </div>
+                        -->
 
                         <!-- 🔹 Pilih sumber kamera + URL IP Cam iPhone -->
                         <div class="setting-group">
