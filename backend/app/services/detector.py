@@ -112,6 +112,10 @@ def detect_fire(frame, session_data):
         fire_confirmed = False
         
     session_data["fire_confirmed"] = fire_confirmed
+    
+    # Assign for return and display usage
+    fire_detected = fire_detected_this_frame
+
             
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cv2.putText(frame, timestamp, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 

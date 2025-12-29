@@ -85,7 +85,10 @@ def start_detection(current_user):
         # Critical Check
         if camera_obj is None or not camera_obj.isOpened():
             print("[START_DETECTION] ERROR: Camera not opened")
-            return jsonify({'error': 'Server Cloud cannot access local webcam. Use IP Camera.'}), 500
+            if camera_source in ['IPHONE', 'IP_CAMERA']:
+                return jsonify({'error': f'Gagal membuka IP Camera di URL: {ip_camera_url}. Pastikan URL benar dan dapat diakses publik.'}), 500
+            else:
+                return jsonify({'error': 'Server Cloud cannot access local webcam. Use IP Camera.'}), 500
 
         # Start Session
         session_id_str = str(uuid.uuid4())

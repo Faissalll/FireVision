@@ -246,6 +246,11 @@ def generate_frames(session_id):
                 break
 
             success, frame = camera.read()
+            # Skip frames for performance (process every 3rd frame)
+            session['frame_counter'] = session.get('frame_counter', 0) + 1
+            if session['frame_counter'] % 3 != 0:
+                continue
+
             if not success:
                 # Loop video if file/demo, or retry if IP cam?
                 # For now just wait and retry
